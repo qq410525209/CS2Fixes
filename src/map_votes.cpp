@@ -121,6 +121,7 @@ static int __cdecl OrderStringsLexicographically(const char* const* a, const cha
 }
 
 CON_COMMAND_CHAT_FLAGS(nominate, "[mapname] - Nominate a map (empty to clear nomination)", ADMFLAG_NONE)
+CON_COMMAND_CHAT_FLAGS(yd, "[地图名称] - 定图指令", ADMFLAG_NONE)
 {
 	if (!g_bVoteManagerEnable || !player)
 		return;
@@ -185,6 +186,7 @@ CON_COMMAND_CHAT_FLAGS(nominate, "[mapname] - Nominate a map (empty to clear nom
 	}
 }
 
+//	增加一个
 CON_COMMAND_CHAT(nomlist, "- List the list of nominations")
 {
 	if (!g_bVoteManagerEnable)
