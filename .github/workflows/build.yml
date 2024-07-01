@@ -7,18 +7,18 @@ on:
     branches:
       - main
     paths-ignore:
-      - LICENSE
-      - README.md
-      - 'configs**'
-      - '**.sln'
-      - '**.vcxproj**'
+    - LICENSE
+    - README.md
+    - 'configs**'
+    - '**.sln'
+    - '**.vcxproj**'
   pull_request:
     paths-ignore:
-      - LICENSE
-      - README.md
-      - 'configs**'
-      - '**.sln'
-      - '**.vcxproj**'
+    - LICENSE
+    - README.md
+    - 'configs**'
+    - '**.sln'
+    - '**.vcxproj**'
 
 jobs:
   build:
@@ -88,15 +88,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check GitHub context
-        run: echo "GitHub context: ${{ toJson(github) }}"
-
-      - name: Check tag name
-        run: |
-          echo "Ref: $GITHUB_REF"
-          version=`echo $GITHUB_REF | sed "s/refs\/tags\///"`
-          echo "Version: $version"
-
       - name: Download artifacts
         uses: actions/download-artifact@v4
 
@@ -113,6 +104,7 @@ jobs:
             cd ./Windows/
             zip -r ../${{ github.event.repository.name }}-${version}-windows.zip *
             cd -
+          fi
 
       - name: Release
         uses: svenstaro/upload-release-action@v2
