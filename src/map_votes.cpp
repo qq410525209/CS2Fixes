@@ -121,7 +121,6 @@ static int __cdecl OrderStringsLexicographically(const char* const* a, const cha
 }
 
 CON_COMMAND_CHAT_FLAGS(nominate, "[mapname] - Nominate a map (empty to clear nomination)", ADMFLAG_NONE)
-CON_COMMAND_CHAT_FLAGS(yd, "[地图名称] - 定图指令", ADMFLAG_NONE)
 {
 	if (!g_bVoteManagerEnable || !player)
 		return;
@@ -186,7 +185,72 @@ CON_COMMAND_CHAT_FLAGS(yd, "[地图名称] - 定图指令", ADMFLAG_NONE)
 	}
 }
 
-//	增加一个
+//add yd
+CON_COMMAND_CHAT_FLAGS(yd, "[map] - !yd ze_deadcore_xcq_cs2 yes?", ADMFLAG_NONE)
+{
+	if (!g_bVoteManagerEnable || !player)
+		return;
+
+	int iResponse = g_pMapVoteSystem->AddMapNomination(player->GetPlayerSlot(), args.ArgC() < 2 ? "" : args[1]);
+	ZEPlayer* pPlayer = g_playerManager->GetPlayer(player->GetPlayerSlot());
+
+	if (!pPlayer)
+		return;
+
+	switch (iResponse) {
+		case NominationReturnCodes::VOTE_STARTED:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Could not nominate as the vote has already started.");
+			break;
+		case NominationReturnCodes::INVALID_INPUT:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Could not nominate as the input is invalid. Usage: !nominate <map substring>");
+			break;
+		case NominationReturnCodes::MAP_NOT_FOUND:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Could not nominate as no map matched '%s'.", args[1]);
+			break;
+		case NominationReturnCodes::INVALID_MAP:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "The map matching '%s' is not available for nomination.", args[1]);
+			break;
+		case NominationReturnCodes::NOMINATION_DISABLED:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Nomination is currently disabled.");
+			break;
+		case NominationReturnCodes::NOMINATION_RESET:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Your nomination was reset.");
+			break;
+		case NominationReturnCodes::NOMINATION_RESET_FAILED:
+		{
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "The list of all maps will be shown in console.");
+			ClientPrint(player, HUD_PRINTCONSOLE, "The list of all maps is:");
+			CUtlVector<const char*> vecMapNames;
+
+			for (int i = 0; i < g_pMapVoteSystem->GetMapListSize(); i++)
+				vecMapNames.AddToTail(g_pMapVoteSystem->GetMapName(i));
+
+			vecMapNames.Sort(OrderStringsLexicographically);
+
+			// TODO: print cooldown time here too (after rewrite)
+			FOR_EACH_VEC(vecMapNames, i)
+				ClientPrint(player, HUD_PRINTCONSOLE, "- %s", vecMapNames[i]);
+
+			break;
+		}
+		default:
+			if (pPlayer->GetNominateTime() + 60.0f > gpGlobals->curtime)
+			{
+				int iRemainingTime = (int)(pPlayer->GetNominateTime() + 60.0f - gpGlobals->curtime);
+				ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Wait %i seconds before you can nominate again.", iRemainingTime);
+				return;
+			}
+			else
+			{
+				const char* sPlayerName = player->GetPlayerName();
+				const char* sMapName = g_pMapVoteSystem->GetMapName(iResponse);
+				int iNumNominations = g_pMapVoteSystem->GetTotalNominations(iResponse);
+				ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX " \x06%s \x01was nominated by %s. It now has %d nominations.", sMapName, sPlayerName, iNumNominations);
+				pPlayer->SetNominateTime(gpGlobals->curtime);
+			}
+	}
+}
+//ye end
 CON_COMMAND_CHAT(nomlist, "- List the list of nominations")
 {
 	if (!g_bVoteManagerEnable)
