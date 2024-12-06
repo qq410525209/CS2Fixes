@@ -101,41 +101,41 @@ static float g_flInfectShakeAmplitude = 15.f;
 static float g_flInfectShakeFrequency = 2.f;
 static float g_flInfectShakeDuration = 5.f;
 
-FAKE_BOOL_CVAR(zr_enable, "Whether to enable ZR features", g_bEnableZR, false, false)
-FAKE_FLOAT_CVAR(zr_ztele_max_distance, "Maximum distance players are allowed to move after starting ztele", g_flMaxZteleDistance, 150.0f, false)
-FAKE_BOOL_CVAR(zr_ztele_allow_humans, "Whether to allow humans to use ztele", g_bZteleHuman, false, false)
-FAKE_FLOAT_CVAR(zr_knockback_scale, "Global knockback scale", g_flKnockbackScale, 5.0f, false)
-FAKE_INT_CVAR(zr_infect_spawn_type, "Type of Mother Zombies Spawn [0 = MZ spawn where they stand, 1 = MZ get teleported back to spawn on being picked]", g_iInfectSpawnType, EZRSpawnType::RESPAWN, false)
-FAKE_INT_CVAR(zr_infect_spawn_time_min, "Minimum time in which Mother Zombies should be picked, after round start", g_iInfectSpawnTimeMin, 15, false)
-FAKE_INT_CVAR(zr_infect_spawn_time_max, "Maximum time in which Mother Zombies should be picked, after round start", g_iInfectSpawnTimeMax, 15, false)
-FAKE_INT_CVAR(zr_infect_spawn_mz_ratio, "Ratio of all Players to Mother Zombies to be spawned at round start", g_iInfectSpawnMZRatio, 7, false)
-FAKE_INT_CVAR(zr_infect_spawn_mz_min_count, "Minimum amount of Mother Zombies to be spawned at round start", g_iInfectSpawnMinCount, 1, false)
-FAKE_FLOAT_CVAR(zr_respawn_delay, "Time before a zombie is automatically respawned, negative values (e.g. -1.0) disable this, note maps can still manually respawn at any time", g_flRespawnDelay, 5.0f, false)
-FAKE_INT_CVAR(zr_default_winner_team, "Which team wins when time ran out [1 = Draw, 2 = Zombies, 3 = Humans]", g_iDefaultWinnerTeam, CS_TEAM_SPECTATOR, false)
-FAKE_INT_CVAR(zr_mz_immunity_reduction, "How much mz immunity to reduce for each player per round (0-100)", g_iMZImmunityReduction, 20, false)
-FAKE_INT_CVAR(zr_sounds_groan_chance, "How likely should a zombie groan whenever they take damage (1 / N)", g_iGroanChance, 5, false)
-FAKE_FLOAT_CVAR(zr_sounds_moan_interval, "How often in seconds should zombies moan", g_flMoanInterval, 5.f, false)
-FAKE_BOOL_CVAR(zr_napalm_enable, "Whether to use napalm grenades", g_bNapalmGrenades, true, false)
-FAKE_FLOAT_CVAR(zr_napalm_burn_duration, "How long in seconds should zombies burn from napalm grenades", g_flNapalmDuration, 5.f, false)
-FAKE_FLOAT_CVAR(zr_napalm_full_damage, "The amount of damage needed to apply full burn duration for napalm grenades (max grenade damage is 99)", g_flNapalmFullDamage, 50.f, false)
-FAKE_STRING_CVAR(zr_human_win_overlay_particle, "Screenspace particle to display when human win", g_szHumanWinOverlayParticle, false)
-FAKE_STRING_CVAR(zr_human_win_overlay_material, "Material override for human's win overlay particle", g_szHumanWinOverlayMaterial, false)
-FAKE_FLOAT_CVAR(zr_human_win_overlay_size, "Size of human's win overlay particle", g_flHumanWinOverlaySize, 5.0f, false)
-FAKE_STRING_CVAR(zr_zombie_win_overlay_particle, "Screenspace particle to display when zombie win", g_szZombieWinOverlayParticle, false)
-FAKE_STRING_CVAR(zr_zombie_win_overlay_material, "Material override for zombie's win overlay particle", g_szZombieWinOverlayMaterial, false)
-FAKE_FLOAT_CVAR(zr_zombie_win_overlay_size, "Size of zombie's win overlay particle", g_flZombieWinOverlaySize, 5.0f, false)
-FAKE_BOOL_CVAR(zr_infect_shake, "Whether to shake a player's view on infect", g_bInfectShake, true, false);
-FAKE_FLOAT_CVAR(zr_infect_shake_amp, "Amplitude of shaking effect", g_flInfectShakeAmplitude, 15.f, false);
-FAKE_FLOAT_CVAR(zr_infect_shake_frequency, "Frequency of shaking effect", g_flInfectShakeFrequency, 2.f, false);
-FAKE_FLOAT_CVAR(zr_infect_shake_duration, "Duration of shaking effect", g_flInfectShakeDuration, 5.f, false);
+FAKE_BOOL_CVAR(zr_enable, "是否启用ZR功能", g_bEnableZR, false, false)
+FAKE_FLOAT_CVAR(zr_ztele_max_distance, "玩家在启动ztele后允许移动的最大距离", g_flMaxZteleDistance, 150.0f, false)
+FAKE_BOOL_CVAR(zr_ztele_allow_humans, "是否允许人类使用ztele", g_bZteleHuman, false, false)
+FAKE_FLOAT_CVAR(zr_knockback_scale, "全局击退比例", g_flKnockbackScale, 5.0f, false)
+FAKE_INT_CVAR(zr_infect_spawn_type, "母僵尸生成的类型 [0 = MZ生成在他们站立的地方, 1 = MZ在被选中后被传送回出生点]", g_iInfectSpawnType, EZRSpawnType::RESPAWN, false)
+FAKE_INT_CVAR(zr_infect_spawn_time_min, "母僵尸应该在回合开始后被选中的最短时间", g_iInfectSpawnTimeMin, 15, false)
+FAKE_INT_CVAR(zr_infect_spawn_time_max, "母僵尸应该在回合开始后被选中的最长时间", g_iInfectSpawnTimeMax, 15, false)
+FAKE_INT_CVAR(zr_infect_spawn_mz_ratio, "每个回合开始时母僵尸与玩家的比例", g_iInfectSpawnMZRatio, 7, false)
+FAKE_INT_CVAR(zr_infect_spawn_mz_min_count, "每个回合开始时最少的母僵尸数量", g_iInfectSpawnMinCount, 1, false)
+FAKE_FLOAT_CVAR(zr_respawn_delay, "僵尸自动复生的时间，负值（例如 -1.0）禁用此功能，注：地图仍然可以随时手动复生", g_flRespawnDelay, 5.0f, false)
+FAKE_INT_CVAR(zr_default_winner_team, "时间跑完时哪一队获胜 [1 = 平局, 2 = 僵尸, 3 = 人类]", g_iDefaultWinnerTeam, CS_TEAM_SPECTATOR, false)
+FAKE_INT_CVAR(zr_mz_immunity_reduction, "每回合减少的母僵尸免疫力（0-100）", g_iMZImmunityReduction, 20, false)
+FAKE_INT_CVAR(zr_sounds_groan_chance, "僵尸受伤时嘶吼的概率（1 / N）", g_iGroanChance, 5, false)
+FAKE_FLOAT_CVAR(zr_sounds_moan_interval, "僵尸每隔多少秒嘶吼一次", g_flMoanInterval, 5.f, false)
+FAKE_BOOL_CVAR(zr_napalm_enable, "是否使用燃烧瓶手雷", g_bNapalmGrenades, true, false)
+FAKE_FLOAT_CVAR(zr_napalm_burn_duration, "僵尸因燃烧瓶手雷燃烧的时间", g_flNapalmDuration, 5.f, false)
+FAKE_FLOAT_CVAR(zr_napalm_full_damage, "需要应用完全燃烧持续时间的伤害量（最大手雷伤害为99）", g_flNapalmFullDamage, 50.f, false)
+FAKE_STRING_CVAR(zr_human_win_overlay_particle, "人类获胜时显示的屏幕粒子", g_szHumanWinOverlayParticle, false)
+FAKE_STRING_CVAR(zr_human_win_overlay_material, "人类获胜时的屏幕粒子材质覆盖", g_szHumanWinOverlayMaterial, false)
+FAKE_FLOAT_CVAR(zr_human_win_overlay_size, "人类获胜时屏幕粒子的大小", g_flHumanWinOverlaySize, 5.0f, false)
+FAKE_STRING_CVAR(zr_zombie_win_overlay_particle, "僵尸获胜时显示的屏幕粒子", g_szZombieWinOverlayParticle, false)
+FAKE_STRING_CVAR(zr_zombie_win_overlay_material, "僵尸获胜时的屏幕粒子材质覆盖", g_szZombieWinOverlayMaterial, false)
+FAKE_FLOAT_CVAR(zr_zombie_win_overlay_size, "僵尸获胜时屏幕粒子的大小", g_flZombieWinOverlaySize, 5.0f, false)
+FAKE_BOOL_CVAR(zr_infect_shake, "感染时是否使玩家视角震动", g_bInfectShake, true, false)
+FAKE_FLOAT_CVAR(zr_infect_shake_amp, "震动效果的振幅", g_flInfectShakeAmplitude, 15.f, false)
+FAKE_FLOAT_CVAR(zr_infect_shake_frequency, "震动效果的频率", g_flInfectShakeFrequency, 2.f, false)
+FAKE_FLOAT_CVAR(zr_infect_shake_duration, "震动效果的持续时间", g_flInfectShakeDuration, 5.f, false)
 
 // meant only for offline config validation and can easily cause issues when used on live server
 #ifdef _DEBUG
-CON_COMMAND_F(zr_reload_classes, "Reload ZR player classes", FCVAR_SPONLY | FCVAR_LINKED_CONCOMMAND)
+CON_COMMAND_F(zr_reload_classes, "重新加载ZR玩家类别", FCVAR_SPONLY | FCVAR_LINKED_CONCOMMAND)
 {
 	g_pZRPlayerClassManager->LoadPlayerClass();
 	
-	Message("Reloaded ZR player classes.\n");
+	Message("重新加载 ZR 玩家类别.\n");
 }
 #endif
 
@@ -380,9 +380,9 @@ void CZRPlayerClassManager::LoadPlayerClass()
 	{
 		bool bHuman = szTeamName == "Human";
 		if (bHuman)
-			Message("Human Classes:\n");
+			Message("人类 类型:\n");
 		else
-			Message("Zombie Classes:\n");
+			Message("僵尸 类型:\n");
 
 		for (auto& [szClassName, jsonClass] : jsonTeamClasses.items())
 		{
@@ -947,7 +947,7 @@ void SetupCTeams()
 
 void ZR_OnRoundStart(IGameEvent* pEvent)
 {
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "The game is \x05Humans vs. Zombies\x01, the goal for zombies is to infect all humans by knifing them.");
+	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "跑图训练 请尽情的自由的探索地图,无尽的轮回练习技巧.");
 	SetupRespawnToggler();
 	CZRRegenTimer::RemoveAllTimers();
 

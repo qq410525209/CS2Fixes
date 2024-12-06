@@ -67,16 +67,16 @@ std::string g_strMarkParticlePath = "particles/cs2fixes/leader_defend_mark.vpcf"
 static bool g_bLeaderCanTargetPlayers = false;
 static bool g_bLeaderVoteMultiple = true;
 
-FAKE_BOOL_CVAR(cs2f_leader_enable, "Whether to enable Leader features", g_bEnableLeader, false, false)
-FAKE_FLOAT_CVAR(cs2f_leader_vote_ratio, "Vote ratio needed for player to become a leader", g_flLeaderVoteRatio, 0.2f, false)
-FAKE_BOOL_CVAR(cs2f_leader_actions_ct_only, "Whether to allow leader actions (like !beacon) only from human team", g_bLeaderActionsHumanOnly, true, false)
-FAKE_BOOL_CVAR(cs2f_leader_marker_ct_only, "Whether to have zombie leaders' player_pings spawn in particle markers or not", g_bLeaderMarkerHumanOnly, true, false)
-FAKE_BOOL_CVAR(cs2f_leader_mute_player_pings, "Whether to mute player pings made by non-leaders", g_bMuteNonLeaderPings, true, false)
-FAKE_STRING_CVAR(cs2f_leader_model_path, "Path to player model to be used for leaders", g_strLeaderModelPath, false)
-FAKE_STRING_CVAR(cs2f_leader_defend_particle, "Path to defend particle to be used with c_defend", g_strDefendParticlePath, false)
-FAKE_STRING_CVAR(cs2f_leader_mark_particle, "Path to particle to be used when a ct leader using player_ping", g_strMarkParticlePath, false)
-FAKE_BOOL_CVAR(cs2f_leader_can_target_players, "Whether a leader can target other players with leader commands (not including c_leader)", g_bLeaderCanTargetPlayers, false, false)
-FAKE_BOOL_CVAR(cs2f_leader_vote_multiple , "If true, players can vote up to cs2f_max_leaders leaders. If false, they may vote for a single leader", g_bLeaderVoteMultiple, true, false)
+FAKE_BOOL_CVAR(cs2f_leader_enable, "是否启用Leader功能", g_bEnableLeader, false, false)
+FAKE_FLOAT_CVAR(cs2f_leader_vote_ratio, "玩家成为leader所需的投票比例", g_flLeaderVoteRatio, 0.2f, false)
+FAKE_BOOL_CVAR(cs2f_leader_actions_ct_only, "是否仅允许人类队伍的玩家执行leader操作(如!beacon)", g_bLeaderActionsHumanOnly, true, false)
+FAKE_BOOL_CVAR(cs2f_leader_marker_ct_only, "是否让僵尸leader的player_pings生成粒子标记", g_bLeaderMarkerHumanOnly, true, false)
+FAKE_BOOL_CVAR(cs2f_leader_mute_player_pings, "是否静音非leader的player pings", g_bMuteNonLeaderPings, true, false)
+FAKE_STRING_CVAR(cs2f_leader_model_path, "用于leader的玩家模型路径", g_strLeaderModelPath, false)
+FAKE_STRING_CVAR(cs2f_leader_defend_particle, "用于c_defend的防守粒子路径", g_strDefendParticlePath, false)
+FAKE_STRING_CVAR(cs2f_leader_mark_particle, "当一个ct leader使用player_ping时使用的粒子路径", g_strMarkParticlePath, false)
+FAKE_BOOL_CVAR(cs2f_leader_can_target_players, "leader是否可以使用leader命令来锁定其他玩家(不包括c_leader)", g_bLeaderCanTargetPlayers, false, false)
+FAKE_BOOL_CVAR(cs2f_leader_vote_multiple, "如果为true,玩家可以投票最多为cs2f_max_leaders的多个leader。如果为false,他们只能投票选出一个leader", g_bLeaderVoteMultiple, true, false)
 
 static int g_iMaxLeaders = 3;
 static int g_iMaxMarkers = 6;
