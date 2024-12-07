@@ -776,7 +776,7 @@ CON_COMMAND_CHAT_FLAGS(pm, "<name> <message> - Private message a player. This wi
 	Message("[PM to %s] %s: %s\n", pTarget->GetPlayerName(), pszName, strMessage.c_str());
 }
 
-CON_COMMAND_CHAT_FLAGS(who, "- List the flags of all online players", ADMFLAG_GENERIC)
+CON_COMMAND_CHAT_FLAGS(who, "- 列出所有在线玩家的标志", ADMFLAG_GENERIC)
 {
 	std::vector<std::tuple<std::string, std::string, uint64>> rgNameSlotID;
 
@@ -983,7 +983,7 @@ CON_COMMAND_CHAT_FLAGS(listdc, "- List recently disconnected players and their S
 	g_pAdminSystem->ShowDisconnectedPlayers(player);
 }
 
-CON_COMMAND_CHAT_FLAGS(endround, "- Immediately ends the round, client-side variant of endround", ADMFLAG_RCON)
+CON_COMMAND_CHAT_FLAGS(endround, "- 立即结束回合Immediately ends the round, client-side variant of endround", ADMFLAG_RCON)
 {
 	g_pGameRules->TerminateRound(0.0f, CSRoundEndReason::Draw);
 }

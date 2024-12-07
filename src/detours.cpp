@@ -318,17 +318,17 @@ void SayChatMessageWithTimer(IRecipientFilter &filter, const char *pText, CCSPla
 		int mins = iTriggerTime / 60;
 		int secs = iTriggerTime % 60;
 
-		V_snprintf(buf, sizeof(buf), "%s %s %s %2d:%02d", " \7CONSOLE:\4", pText + sizeof("Console:"), "\x10- @", mins, secs);
+		V_snprintf(buf, sizeof(buf), "%s %s %s %2d:%02d", " \7[地图提示]:\4", pText + sizeof("Console:"), "时间\x10","[", mins, secs, "]");
 	}
 	else
-		V_snprintf(buf, sizeof(buf), "%s %s", " \7CONSOLE:\4", pText + sizeof("Console:"));
+		V_snprintf(buf, sizeof(buf), "%s %s", " \7[地图提示]:\4", pText + sizeof("Console:"));
 
 	UTIL_SayTextFilter(filter, buf, pPlayer, eMessageType);
 }
 
 bool g_bEnableTriggerTimer = false;
 
-FAKE_BOOL_CVAR(cs2f_trigger_timer_enable, "Whether to process countdown messages said by Console (e.g. Hold for 10 seconds) and append the round time where the countdown resolves", g_bEnableTriggerTimer, false, false)
+FAKE_BOOL_CVAR(cs2f_trigger_timer_enable, "是否处理控制台说的倒计时消息（例如，保持 10 秒）并附加倒计时解决的回合时间", g_bEnableTriggerTimer, false, false)
 
 void FASTCALL Detour_UTIL_SayTextFilter(IRecipientFilter &filter, const char *pText, CCSPlayerController *pPlayer, uint64 eMessageType)
 {
@@ -339,7 +339,7 @@ void FASTCALL Detour_UTIL_SayTextFilter(IRecipientFilter &filter, const char *pT
 		return SayChatMessageWithTimer(filter, pText, pPlayer, eMessageType);
 
 	char buf[256];
-	V_snprintf(buf, sizeof(buf), "%s %s", " \7CONSOLE:\4", pText + sizeof("Console:"));
+	V_snprintf(buf, sizeof(buf), "%s %s", " \7[地图提示]:\4", pText + sizeof("Console:"));
 
 	UTIL_SayTextFilter(filter, buf, pPlayer, eMessageType);
 }
