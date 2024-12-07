@@ -494,50 +494,51 @@ CON_COMMAND_CHAT_LEADER(glow, "[name] [color] - Toggle glow highlight on a playe
 		PrintMultiAdminAction(nType, pszCommandPlayerName, "toggled glow on", "", CHAT_PREFIX);
 }
 
-CON_COMMAND_CHAT(glows, "- List all active player glows")
+CON_COMMAND_CHAT(glows, "- 列出所有活跃的玩家光晕")
 {
 	std::pair<int, std::string> glows = GetCount(1);
 
 	if (glows.first == 0)
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "There are no active glows.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "没有活跃的光晕。");
 	else
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%i active glows: %s", glows.first, glows.second.c_str());
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "有 %i 个活跃的光晕: %s", glows.first, glows.second.c_str());
 }
 
-CON_COMMAND_CHAT(vl, "<name> - Vote for a player to become a leader")
+CON_COMMAND_CHAT(vl, "<name> - 投票让一名玩家成为指挥官")
 {
 	if (!g_bEnableLeader)
 		return;
 
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "You cannot use this command from the server console.");
+		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "你不能从服务器控制台使用此命令。");
 		return;
 	}
 
 	if (args.ArgC() < 2)
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Usage: !vl <name>");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "用法: !vl <name>");
 		return;
 	}
 
 	if (gpGlobals->curtime < 60.0f)
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Leader voting is not open yet.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "指挥官投票尚未开放。");
 		return;
 	}
 	
 	if (GetLeaders().first > 0 && !g_bLeaderVoteMultiple)
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "There is already an active leader.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "已经有活跃的指挥官。");
 		return;
 	}
 
 	if (GetLeaders().first >= g_iMaxLeaders)
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "The max amount of leaders has already been reached.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "指挥官数量已经达到最大值。");
 		return;
 	}
+}
 
 	ZEPlayer* pPlayer = player->GetZEPlayer();
 	if (!pPlayer)
@@ -546,7 +547,7 @@ CON_COMMAND_CHAT(vl, "<name> - Vote for a player to become a leader")
 	if (pPlayer->GetLeaderVoteTime() + 30.0f > gpGlobals->curtime)
 	{
 		int iRemainingTime = (int)(pPlayer->GetLeaderVoteTime() + 30.0f - gpGlobals->curtime);
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Wait %i seconds before you can !vl again.", iRemainingTime);
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "请等待 %i 秒后再次使用 !vl 命令。", iRemainingTime);
 		return;
 	}
 
@@ -561,13 +562,13 @@ CON_COMMAND_CHAT(vl, "<name> - Vote for a player to become a leader")
 
 	if (pPlayerTarget->IsLeader())
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%s is already a leader.", pTarget->GetPlayerName());
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%s 已经是指挥官。", pTarget->GetPlayerName());
 		return;
 	}
 
 	if (pPlayerTarget->HasPlayerVotedLeader(pPlayer))
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have already voted for %s to become a leader.", pTarget->GetPlayerName());
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "你已经为 %s 投票成为指挥官。", pTarget->GetPlayerName());
 		return;
 	}
 
@@ -580,8 +581,8 @@ CON_COMMAND_CHAT(vl, "<name> - Vote for a player to become a leader")
 	{
 		Leader_SetNewLeader(pPlayerTarget);
 		Message("%s was voted for Leader with %i vote(s).\n", pTarget->GetPlayerName(), iNeededLeaderVoteCount);
-		ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s has been voted as a leader!", pTarget->GetPlayerName());
-		ClientPrint(pTarget, HUD_PRINTTALK, CHAT_PREFIX "You became a leader! Use !leaderhelp and !leadercolors commands to list available leader commands and colors.");
+		ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s 已被投票选为指挥官！", pTarget->GetPlayerName());
+		ClientPrint(pTarget, HUD_PRINTTALK, CHAT_PREFIX "你已成为指挥官！使用 !leaderhelp 和 !leadercolors 命令列出可用的指挥官命令和颜色。");
 		return;
 	}
 
@@ -590,7 +591,7 @@ CON_COMMAND_CHAT(vl, "<name> - Vote for a player to become a leader")
 				player->GetPlayerName(), pTarget->GetPlayerName(), iLeaderVoteCount+1, iNeededLeaderVoteCount);
 }
 
-CON_COMMAND_CHAT_LEADER(defend, "[name|duration] [duration] - Place a defend marker on the target player")
+CON_COMMAND_CHAT_LEADER(defend, "[name|duration] [duration] - 在目标玩家上放置一个防御标记")
 {
 	ZEPlayer* pPlayer = player ? player->GetZEPlayer() : nullptr;
 	bool bIsAdmin = pPlayer ? pPlayer->IsAdminFlagSet(FLAG_LEADER) : true;
@@ -624,7 +625,7 @@ CON_COMMAND_CHAT_LEADER(defend, "[name|duration] [duration] - Place a defend mar
 	}
 }
 
-CON_COMMAND_CHAT_LEADER(tracer, "[name] [color] - Toggle projectile tracers on a player")
+CON_COMMAND_CHAT_LEADER(tracer, "[name] [color] - 切换玩家的弹道追踪器")
 {
 	ZEPlayer* pPlayer = player ? player->GetZEPlayer() : nullptr;
 	bool bIsAdmin = pPlayer ? pPlayer->IsAdminFlagSet(FLAG_LEADER) : true;
@@ -668,7 +669,7 @@ CON_COMMAND_CHAT_LEADER(tracer, "[name] [color] - Toggle projectile tracers on a
 	}
 }
 
-CON_COMMAND_CHAT(tracers, "- List all active player tracers")
+CON_COMMAND_CHAT(tracers, "- 列出所有活跃的玩家追踪器")
 {
 	std::pair<int, std::string> tracers = GetCount(2);
 
@@ -678,7 +679,7 @@ CON_COMMAND_CHAT(tracers, "- List all active player tracers")
 		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%i active tracers: %s", tracers.first, tracers.second.c_str());
 }
 
-CON_COMMAND_CHAT_LEADER(beacon, "[name] [color] - Toggle beacon on a player")
+CON_COMMAND_CHAT_LEADER(beacon, "[name] [color] - 切换玩家的信标")
 {
 	ZEPlayer* pPlayer = player ? player->GetZEPlayer() : nullptr;
 	bool bIsAdmin = pPlayer ? pPlayer->IsAdminFlagSet(FLAG_LEADER) : true;
@@ -729,29 +730,29 @@ CON_COMMAND_CHAT_LEADER(beacon, "[name] [color] - Toggle beacon on a player")
 		PrintMultiAdminAction(nType, pszCommandPlayerName, "toggled beacon on", "", CHAT_PREFIX);
 }
 
-CON_COMMAND_CHAT(beacons, "- List all active player beacons")
+CON_COMMAND_CHAT(beacons, "- 列出所有活跃的玩家信标")
 {
 	std::pair<int, std::string> beacons = GetCount(3);
 
 	if (beacons.first == 0)
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "There are no active beacons.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "当前没有活跃的信标。");
 	else
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%i active beacons: %s", beacons.first, beacons.second.c_str());
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "有 %i 个活跃的信标: %s", beacons.first, beacons.second.c_str());
 }
 
-CON_COMMAND_CHAT_LEADER(enablepings, "- Enable non-leaders pings")
+CON_COMMAND_CHAT_LEADER(enablepings, "- 启用非指挥官的通知")
 {
 	g_bPingWithLeader = true;
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "\4Enabled\x01 pings for non-leaders.");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "\4已启用\x01 非指挥官的通知。");
 }
 
-CON_COMMAND_CHAT_LEADER(disablepings, "- Disable non-leaders pings")
+CON_COMMAND_CHAT_LEADER(disablepings, "- 禁用非指挥官的通知")
 {
 	g_bPingWithLeader = false;
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "\2Disabled\x01 pings for non-leaders.");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "\2已禁用\x01 非指挥官的通知。");
 }
 
-CON_COMMAND_CHAT(leaders, "- List all current leaders")
+CON_COMMAND_CHAT(leaders, "- 列出所有当前的指挥官")
 {
 	if (!g_bEnableLeader)
 		return;
@@ -759,38 +760,38 @@ CON_COMMAND_CHAT(leaders, "- List all current leaders")
 	std::pair<int, std::string> leaders = GetLeaders();
 
 	if (leaders.first == 0)
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "There are currently no leaders.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "当前没有指挥官。");
 	else
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%i leaders: %s", leaders.first, leaders.second.c_str());
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "有 %i 位指挥官: %s", leaders.first, leaders.second.c_str());
 }
 
-CON_COMMAND_CHAT(leaderhelp, "- List leader commands in chat")
+CON_COMMAND_CHAT(leaderhelp, "- 列出指挥命令")
 {
 	if (!g_bEnableLeader)
 		return;
 
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "List of leader commands:");
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!leader [name] [color] - Give another player leader status");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "指挥官命令列表:");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!leader [名称] [颜色] - 给其他玩家指挥官状态");
 	if (g_bLeaderCanTargetPlayers)
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!beacon <name> [color] - Toggle beacon on a player");
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!tracer <name> [color] - Toggle projectile tracers on a player");
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!defend [name|duration] [duration] - Place a defend marker on the target player");
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!glow <name> [color] - Toggle glow highlight on a player");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!beacon <名称> [颜色] - 在玩家上切换信标");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!tracer <名称> [颜色] - 在玩家上切换弹道追踪");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!defend [名称|持续时间] [持续时间] - 在目标玩家上放置防御标记");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!glow <名称> [颜色] - 在玩家上切换高亮显示");
 	}
 	else
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!beacon - Toggle beacon on yourself");
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!tracer - Toggle projectile tracers on yourself");
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!defend [duration] - Place a defend marker on yourself");
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!glow - Toggle glow highlight on yourself");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!beacon - 在自己身上切换信标");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!tracer - 在自己身上切换弹道追踪");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!defend [持续时间] - 在自己身上放置防御标记");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!glow - 在自己身上切换高亮显示");
 	}
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!disablepings - Disable non-leaders pings");
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!leadercolor [color] - List leader colors in chat or change your active leader color");
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!resign - Remove leader status from yourself");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!disablepings - 禁用非指挥官的通知");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!leadercolor [颜色] - 在聊天中列出指挥官颜色或更改您的活动指挥官颜色");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "!resign - 从自己身上移除指挥官状态");
 }
 
-CON_COMMAND_CHAT(leadercolor, "[color] - List leader colors in chat or change your leader color")
+CON_COMMAND_CHAT(leadercolor, "[color] - 在聊天中列出指挥官颜色或更改您的指挥官颜色")
 {
 	if (!g_bEnableLeader)
 		return;
@@ -844,14 +845,14 @@ CON_COMMAND_CHAT(leadercolor, "[color] - List leader colors in chat or change yo
 	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "%s", strColors.c_str());
 }
 
-CON_COMMAND_CHAT_LEADER(leader, "[name] [color] - Force leader status on a player")
+CON_COMMAND_CHAT_LEADER(leader, "[name] [color] - 强制设置玩家为指挥")
 {
 	ZEPlayer* pPlayer = player ? player->GetZEPlayer() : nullptr;
 	bool bIsAdmin = pPlayer ? pPlayer->IsAdminFlagSet(FLAG_LEADER) : true;
 
 	if (!bIsAdmin && GetLeaders().first >= g_iMaxLeaders)
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "The max amount of leaders has already been reached.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "指挥数量已经达到最大值.");
 		return;
 	}
 
@@ -934,7 +935,7 @@ CON_COMMAND_CHAT_FLAGS(removeleader, "[name] - Remove leader status from a playe
 		PrintSingleAdminAction(pszCommandPlayerName, pTarget->GetPlayerName(), "removed leader from ", "", CHAT_PREFIX);
 }
 
-CON_COMMAND_CHAT(resign, "- Remove leader status from yourself")
+CON_COMMAND_CHAT(resign, "- 主动辞去指挥职务")
 {
 	if (!g_bEnableLeader)
 		return;
@@ -974,5 +975,5 @@ CON_COMMAND_CHAT(resign, "- Remove leader status from yourself")
 	if (pPawn)
 		Leader_RemoveLeaderVisuals(pPawn);
 
-	ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s resigned from being a leader.", player->GetPlayerName());
+	ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s 主动辞去了指挥官.", player->GetPlayerName());
 }

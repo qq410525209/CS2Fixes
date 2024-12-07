@@ -458,11 +458,11 @@ CON_COMMAND_CHAT(stopsound, "- Toggle weapon sounds")
 	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have %s weapon sounds.", bSilencedSet ? "disabled" : !bSilencedSet && !bStopSet ? "silenced" : "enabled");
 }
 
-CON_COMMAND_CHAT(toggledecals, "- Toggle world decals, if you're into having 10 fps in ZE")
+CON_COMMAND_CHAT(toggledecals, "- 切换世界贴花，如果你希望在 ZE 中获得 10 fps")
 {
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "You cannot use this command from the server console.");
+		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "你不能从服务器控制台使用此命令。");
 		return;
 	}
 
@@ -471,21 +471,21 @@ CON_COMMAND_CHAT(toggledecals, "- Toggle world decals, if you're into having 10 
 
 	g_playerManager->SetPlayerStopDecals(iPlayer, bSet);
 
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have %s world decals.", bSet ? "disabled" : "enabled");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "你已 %s 世界贴花。", bSet ? "禁用" : "启用");
 }
 
 bool g_bEnableNoShake = false;
-FAKE_BOOL_CVAR(cs2f_noshake_enable, "Whether to enable noshake command", g_bEnableNoShake, false, false)
+FAKE_BOOL_CVAR(cs2f_noshake_enable, "是否启用 noshake 命令", g_bEnableNoShake, false, false)
 float g_flMaxShakeAmp = -1.0;
-FAKE_FLOAT_CVAR(cs2f_maximum_shake_amplitude, "Shaking Amplitude bigger than this will be clamped", g_flMaxShakeAmp, -1.0, false)
-CON_COMMAND_CHAT(noshake, "- toggle noshake")
+FAKE_FLOAT_CVAR(cs2f_maximum_shake_amplitude, "超过此值的摇晃幅度将被限制", g_flMaxShakeAmp, -1.0, false)
+CON_COMMAND_CHAT(noshake, "- 切换 noshake")
 {
 	if (!g_bEnableNoShake)
 		return;
 
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "You cannot use this command from the server console.");
+		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "你不能从服务器控制台使用此命令。");
 		return;
 	}
 
@@ -493,7 +493,7 @@ CON_COMMAND_CHAT(noshake, "- toggle noshake")
 	bool bSet = !g_playerManager->IsPlayerUsingNoShake(iPlayer);
 
 	g_playerManager->SetPlayerNoShake(iPlayer, bSet);
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have %s noshake.", bSet ? "enabled" : "disabled");
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "你已 %s noshake。", bSet ? "启用" : "禁用");
 }
 
 bool g_bEnableHide = false;
@@ -504,15 +504,15 @@ FAKE_BOOL_CVAR(cs2f_hide_enable, "Whether to enable hide", g_bEnableHide, false,
 FAKE_INT_CVAR(cs2f_hide_distance_default, "The default distance for hide", g_iDefaultHideDistance, 250, false)
 FAKE_INT_CVAR(cs2f_hide_distance_max, "The max distance for hide", g_iMaxHideDistance, 2000, false)
 
-CON_COMMAND_CHAT(hide, "<distance> - Hide nearby players")
+CON_COMMAND_CHAT(hide, "<distance> - 隐藏附近的玩家")
 {
-	// Silently return so the command is completely hidden
+	// 静默返回以便完全隐藏该命令
 	if (!g_bEnableHide)
 		return;
 
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "You cannot use this command from the server console.");
+		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "你不能从服务器控制台使用此命令。");
 		return;
 	}
 
@@ -545,17 +545,17 @@ CON_COMMAND_CHAT(hide, "<distance> - Hide nearby players")
 	pZEPlayer->SetHideDistance(distance);
 
 	if (distance == 0)
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Hiding players is now disabled.");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "隐藏玩家功能现在已禁用。");
 	else
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "Now hiding players within %i units.", distance);
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "现在正在隐藏距离内 %i 单位内的玩家。", distance);
 }
 
-CON_COMMAND_CHAT(help, "- Display list of commands in console")
+CON_COMMAND_CHAT(help, "- 在控制台显示命令列表")
 {
 	std::vector<std::string> rgstrCommands;
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, "The list of all commands is:");
+		ClientPrint(player, HUD_PRINTCONSOLE, "所有命令的列表如下：");
 
 		FOR_EACH_VEC(g_CommandList, i)
 		{
@@ -567,8 +567,8 @@ CON_COMMAND_CHAT(help, "- Display list of commands in console")
 	}
 	else
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "The list of all available commands will be shown in console.");
-		ClientPrint(player, HUD_PRINTCONSOLE, "The list of all commands you can use is:");
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "所有可用命令的列表将在控制台显示。");
+		ClientPrint(player, HUD_PRINTCONSOLE, "你可以使用的命令列表如下：");
 
 		ZEPlayer* pZEPlayer = player->GetZEPlayer();
 
@@ -591,7 +591,7 @@ CON_COMMAND_CHAT(help, "- Display list of commands in console")
 		ClientPrint(player, HUD_PRINTCONSOLE, "! can be replaced with / for a silent chat command, or c_ for console usage");
 }
 
-CON_COMMAND_CHAT(spec, "[name] - Spectate another player or join spectators")
+CON_COMMAND_CHAT(spec, "[name] - 观察另一个玩家或加入观众")
 {
 	CCSPlayerPawn* pPawn = (CCSPlayerPawn*)player->GetPawn();
 
@@ -657,7 +657,7 @@ CON_COMMAND_CHAT(spec, "[name] - Spectate another player or join spectators")
 	});
 }
 
-CON_COMMAND_CHAT(getpos, "- Get your position and angles")
+CON_COMMAND_CHAT(getpos, "- 获取你的位置和角度")
 {
 	if (!player)
 		return;
@@ -669,7 +669,7 @@ CON_COMMAND_CHAT(getpos, "- Get your position and angles")
 	ClientPrint(player, HUD_PRINTCONSOLE, "setpos %f %f %f;setang %f %f %f", vecAbsOrigin.x, vecAbsOrigin.y, vecAbsOrigin.z, angRotation.x, angRotation.y, angRotation.z);
 }
 
-CON_COMMAND_CHAT(info, "<name> - Get a player's information")
+CON_COMMAND_CHAT(info, "<name> - 获取玩家的信息")
 {
 	if (args.ArgC() < 2)
 	{
@@ -863,7 +863,7 @@ CON_COMMAND_CHAT(test_target, "<name> [blocked flag] [...] - Test string targett
 	}
 }
 
-CON_COMMAND_CHAT(particle, "- Spawn a particle")
+CON_COMMAND_CHAT(particle, "- 生成一个粒子")
 {
 	if (!player)
 		return;
@@ -883,7 +883,7 @@ CON_COMMAND_CHAT(particle, "- Spawn a particle")
 	Message("You have spawned a particle with effect name: %s\n", particle->m_iszEffectName().String());
 }
 
-CON_COMMAND_CHAT(particle_kv, "- Spawn a particle but using keyvalues to spawn")
+CON_COMMAND_CHAT(particle_kv, "- 使用键值生成一个粒子")
 {
 	if (!player)
 		return;
@@ -901,8 +901,8 @@ CON_COMMAND_CHAT(particle_kv, "- Spawn a particle but using keyvalues to spawn")
 
 	particle->DispatchSpawn(pKeyValues);
 
-	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have spawned a particle using keyvalues with effect name: %s", particle->m_iszEffectName().String());
-	Message("You have spawned a particle using keyvalues with effect name: %s\n", particle->m_iszEffectName().String());
+	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "你已经使用键值生成了一个粒子效果，效果名称为: %s", particle->m_iszEffectName().String());
+	Message("你已经使用键值生成了一个粒子效果，效果名称为: %s\n", particle->m_iszEffectName().String());
 }
 
 CON_COMMAND_CHAT(dispatch_particle, "- Test")
@@ -916,7 +916,7 @@ CON_COMMAND_CHAT(dispatch_particle, "- Test")
 	player->GetPawn()->DispatchParticle(args[1], &filter);
 }
 
-CON_COMMAND_CHAT(emitsound, "- Emit a sound from the entity under crosshair")
+CON_COMMAND_CHAT(emitsound, "- 从准心下的实体发出声音")
 {
 	if (!player)
 		return;
@@ -935,7 +935,7 @@ CON_COMMAND_CHAT(emitsound, "- Emit a sound from the entity under crosshair")
 	Message("Playing %s on %s", args[1], pEntity->GetClassname());
 }
 
-CON_COMMAND_CHAT(getstats, "- Get your stats")
+CON_COMMAND_CHAT(getstats, "- 获取你的统计数据")
 {
 	if (!player)
 		return;
@@ -965,7 +965,7 @@ CON_COMMAND_CHAT(setkills, "- Set your kills")
 	ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have set your kills to %d.", atoi(args[1]));
 }
 
-CON_COMMAND_CHAT(setcollisiongroup, "<group> - Set a player's collision group")
+CON_COMMAND_CHAT(setcollisiongroup, "<group> - 设置玩家的碰撞组")
 {
 	int iNumClients = 0;
 	int pSlots[MAXPLAYERS];
@@ -987,7 +987,7 @@ CON_COMMAND_CHAT(setcollisiongroup, "<group> - Set a player's collision group")
 	}
 }
 
-CON_COMMAND_CHAT(setsolidtype, "<solidtype> - Set a player's solid type")
+CON_COMMAND_CHAT(setsolidtype, "<solidtype> - 设置玩家的固体类型")
 {
 	int iNumClients = 0;
 	int pSlots[MAXPLAYERS];
@@ -1009,7 +1009,7 @@ CON_COMMAND_CHAT(setsolidtype, "<solidtype> - Set a player's solid type")
 	}
 }
 
-CON_COMMAND_CHAT(setinteraction, "<flags> - Set a player's interaction flags")
+CON_COMMAND_CHAT(setinteraction, "<flags> - 设置玩家的交互标志")
 {
 	int iNumClients = 0;
 	int pSlots[MAXPLAYERS];
@@ -1037,7 +1037,7 @@ void HttpCallback(HTTPRequestHandle request, json response)
 	ClientPrintAll(HUD_PRINTTALK, response.dump().c_str());
 }
 
-CON_COMMAND_CHAT(http, "<get/post> <url> [content] - Test an HTTP request")
+CON_COMMAND_CHAT(http, "<get/post> <url> [content] - 测试一个HTTP请求")
 {
 	if (!g_http)
 	{
