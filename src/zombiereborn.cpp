@@ -381,9 +381,9 @@ void CZRPlayerClassManager::LoadPlayerClass()
 	{
 		bool bHuman = szTeamName == "Human";
 		if (bHuman)
-			Message("Human Classes:\n");
+			Message("人类 种类:\n");
 		else
-			Message("Zombie Classes:\n");
+			Message("僵尸 种类:\n");
 
 		for (auto& [szClassName, jsonClass] : jsonTeamClasses.items())
 		{
@@ -1031,7 +1031,7 @@ void SetupCTeams()
 
 void ZR_OnRoundStart(IGameEvent* pEvent)
 {
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "The game is \x05Humans vs. Zombies\x01, the goal for zombies is to infect all humans by knifing them.");
+	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "\x05你变成僵尸啦,开始自由的玩耍吧~呐?呐呐~~");
 	SetupRespawnToggler();
 	CZRRegenTimer::RemoveAllTimers();
 
@@ -1890,9 +1890,9 @@ CON_COMMAND_CHAT(zclass, "<teamname/class name/number> - Find and select your Z:
 			const char* sCurrentClass = g_pUserPreferencesSystem->GetPreference(iSlot, team == CS_TEAM_CT ? HUMAN_CLASS_KEY_NAME : ZOMBIE_CLASS_KEY_NAME);
 
 			if (sCurrentClass[0] != '\0')
-				ClientPrint(player, HUD_PRINTTALK, ZR_PREFIX "Your current %s class is: \x10%s\x1. Available classes:", sTeamName, sCurrentClass);
+				ClientPrint(player, HUD_PRINTTALK, ZR_PREFIX "你当前 %s 类型: \x10%s\x1. 可用类型:", sTeamName, sCurrentClass);
 			else
-				ClientPrint(player, HUD_PRINTTALK, ZR_PREFIX "Available %s classes:", sTeamName);
+				ClientPrint(player, HUD_PRINTTALK, ZR_PREFIX "可用 %s 类型:", sTeamName);
 
 			FOR_EACH_VEC(vecClasses, i)
 			{

@@ -578,7 +578,7 @@ CON_COMMAND_CHAT(vl, "<name> - Vote for a player to become a leader")
 		Leader_SetNewLeader(pPlayerTarget);
 		Message("%s was voted for Leader with %i vote(s).\n", pTarget->GetPlayerName(), iNeededLeaderVoteCount);
 		ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s has been voted as a leader!", pTarget->GetPlayerName());
-		ClientPrint(pTarget, HUD_PRINTTALK, CHAT_PREFIX "You became a leader! Use !leaderhelp and !leadercolors commands to list available leader commands and colors.");
+		ClientPrint(pTarget, HUD_PRINTTALK, CHAT_PREFIX "你以成为指挥,输入!leaderhelp查看指挥帮助信息.\nYou became a leader! Use !leaderhelp and !leadercolors commands to list available leader commands and colors.");
 		return;
 	}
 
@@ -830,6 +830,7 @@ CON_COMMAND_CHAT(leadercolor, "[color] - List leader colors in chat or change yo
 }
 
 CON_COMMAND_CHAT_LEADER(leader, "[name] [color] - Force leader status on a player")
+CON_COMMAND_CHAT_LEADER(l, "[name] [color] - Force leader status on a player")
 {
 	ZEPlayer* pPlayer = player ? player->GetZEPlayer() : nullptr;
 	bool bIsAdmin = pPlayer ? pPlayer->IsAdminFlagSet(FLAG_LEADER) : true;
@@ -918,6 +919,7 @@ CON_COMMAND_CHAT_FLAGS(removeleader, "[name] - Remove leader status from a playe
 }
 
 CON_COMMAND_CHAT(resign, "- Remove leader status from yourself")
+CON_COMMAND_CHAT(cdu, "- 下指挥")
 {
 	if (!g_bEnableLeader)
 		return;
@@ -957,5 +959,5 @@ CON_COMMAND_CHAT(resign, "- Remove leader status from yourself")
 	if (pPawn)
 		Leader_RemoveLeaderVisuals(pPawn);
 
-	ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s resigned from being a leader.", player->GetPlayerName());
+	ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "%s 辞去指挥.\nresigned from being a leader.", player->GetPlayerName());
 }
