@@ -830,7 +830,6 @@ CON_COMMAND_CHAT(leadercolor, "[color] - List leader colors in chat or change yo
 }
 
 CON_COMMAND_CHAT_LEADER(leader, "[name] [color] - Force leader status on a player")
-CON_COMMAND_CHAT_LEADER(l, "[name] [color] - Force leader status on a player")
 {
 	ZEPlayer* pPlayer = player ? player->GetZEPlayer() : nullptr;
 	bool bIsAdmin = pPlayer ? pPlayer->IsAdminFlagSet(FLAG_LEADER) : true;
@@ -919,7 +918,6 @@ CON_COMMAND_CHAT_FLAGS(removeleader, "[name] - Remove leader status from a playe
 }
 
 CON_COMMAND_CHAT(resign, "- Remove leader status from yourself")
-CON_COMMAND_CHAT(cdu, "- 下指挥")
 {
 	if (!g_bEnableLeader)
 		return;
