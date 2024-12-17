@@ -317,10 +317,10 @@ void SayChatMessageWithTimer(IRecipientFilter& filter, const char* pText, CCSPla
 		int mins = iTriggerTime / 60;
 		int secs = iTriggerTime % 60;
 
-		V_snprintf(buf, sizeof(buf), "%s %s %s %2d:%02d", " \7CONSOLE:\4", pText + sizeof("Console:"), "\x10- @", mins, secs);
+		V_snprintf(buf, sizeof(buf), "%s %s %s %2d:%02d", " \x0B[地图提示]:\x06", pText + sizeof("Console:"), "\x10- @", mins, secs);
 	}
 	else
-		V_snprintf(buf, sizeof(buf), "%s %s", " \7CONSOLE:\4", pText + sizeof("Console:"));
+		V_snprintf(buf, sizeof(buf), "%s %s", " \x0B[地图提示]:\x06", pText + sizeof("Console:"));
 
 	UTIL_SayTextFilter(filter, buf, pPlayer, eMessageType);
 }
@@ -338,7 +338,7 @@ void FASTCALL Detour_UTIL_SayTextFilter(IRecipientFilter& filter, const char* pT
 		return SayChatMessageWithTimer(filter, pText, pPlayer, eMessageType);
 
 	char buf[256];
-	V_snprintf(buf, sizeof(buf), "%s %s", " \7CONSOLE:\4", pText + sizeof("Console:"));
+	V_snprintf(buf, sizeof(buf), "%s %s", " \x0B[地图提示]:\x06", pText + sizeof("Console:"));
 
 	UTIL_SayTextFilter(filter, buf, pPlayer, eMessageType);
 }

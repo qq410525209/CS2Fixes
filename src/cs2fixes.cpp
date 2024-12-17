@@ -75,7 +75,7 @@ void Message(const char* msg, ...)
 	char buf[1024] = {};
 	V_vsnprintf(buf, sizeof(buf) - 1, msg, args);
 
-	ConColorMsg(Color(255, 0, 255, 255), "[CS2Fixes] %s", buf);
+	ConColorMsg(Color(255, 0, 255, 255), "[XCQ] %s", buf);
 
 	va_end(args);
 }
