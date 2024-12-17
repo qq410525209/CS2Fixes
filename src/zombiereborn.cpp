@@ -1031,7 +1031,7 @@ void SetupCTeams()
 
 void ZR_OnRoundStart(IGameEvent* pEvent)
 {
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "\x05你变成僵尸啦,开始自由的玩耍吧~呐?呐呐~~");
+	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX " \x06练习模式,自由的探索和练习吧~");
 	SetupRespawnToggler();
 	CZRRegenTimer::RemoveAllTimers();
 
