@@ -1031,7 +1031,7 @@ void SetupCTeams()
 
 void ZR_OnRoundStart(IGameEvent* pEvent)
 {
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX " \x06练习模式,自由的探索和练习吧~");
+	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX " \x0A 自由的探索和练习吧.");
 	SetupRespawnToggler();
 	CZRRegenTimer::RemoveAllTimers();
 
