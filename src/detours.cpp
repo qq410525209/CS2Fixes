@@ -317,7 +317,7 @@ void SayChatMessageWithTimer(IRecipientFilter& filter, const char* pText, CCSPla
 		int mins = iTriggerTime / 60;
 		int secs = iTriggerTime % 60;
 
-		V_snprintf(buf, sizeof(buf), "%s %s %s %2d:%02d", " \x0B[地图提示]:\x06", pText + sizeof("Console:"), "\x10- @", mins, secs);
+		V_snprintf(buf, sizeof(buf), "%s %s %s %2d:%02d", " \x0B[地图提示]:\x06", pText + sizeof("Console:"), " \x10[", mins, secs"]");
 	}
 	else
 		V_snprintf(buf, sizeof(buf), "%s %s", " \x0B[地图提示]:\x06", pText + sizeof("Console:"));
