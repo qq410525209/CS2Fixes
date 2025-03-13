@@ -48,7 +48,6 @@ public:
 			return;
 
 		CUtlVector<CHandle<CBasePlayerWeapon>>* weapons = m_pWeaponServices()->m_hMyWeapons();
-		std::vector<CBasePlayerWeapon*> vecWeaponsToDrop;
 
 		FOR_EACH_VEC(*weapons, i)
 		{
@@ -59,14 +58,8 @@ public:
 
 			// If this is a map-spawned weapon (items), drop it
 			if (V_strcmp(pWeapon->m_sUniqueHammerID().Get(), "") && pWeapon->GetWeaponVData()->m_GearSlot() != GEAR_SLOT_KNIFE)
-			{
-				// Queue for dropping after, don't modify this vector while we're iterating it
-				vecWeaponsToDrop.push_back(pWeapon);
-			}
+				m_pWeaponServices()->DropWeapon(pWeapon);
 		}
-
-		for (CBasePlayerWeapon* pWeapon : vecWeaponsToDrop)
-			m_pWeaponServices()->DropWeapon(pWeapon);
 	}
 
 	void CommitSuicide(bool bExplode, bool bForce)
@@ -80,7 +73,7 @@ public:
 				if (pController)
 					EW_PlayerDeathPre(pController);
 			}
-
+			
 			DropMapWeapons();
 		}
 
