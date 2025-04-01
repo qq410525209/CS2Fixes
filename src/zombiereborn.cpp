@@ -72,6 +72,7 @@ ZRWeaponConfig* g_pZRWeaponConfig = nullptr;
 ZRHitgroupConfig* g_pZRHitgroupConfig = nullptr;
 
 CConVar<bool> g_cvarEnableZR("zr_enable", FCVAR_NONE, "Whether to enable ZR features", false);
+CConVar<bool> g_cvarAlwaysJoinCT("zr_always_join_ct", FCVAR_NONE, "Whether players should always join CT team (for training mode)", true);
 CConVar<float> g_cvarMaxZteleDistance("zr_ztele_max_distance", FCVAR_NONE, "Maximum distance players are allowed to move after starting ztele", 150.0f, true, 0.0f, false, 0.0f);
 CConVar<bool> g_cvarZteleHuman("zr_ztele_allow_humans", FCVAR_NONE, "Whether to allow humans to use ztele", false);
 CConVar<float> g_cvarKnockbackScale("zr_knockback_scale", FCVAR_NONE, "Global knockback scale", 5.0f);
@@ -1329,113 +1330,130 @@ void ZR_InfectMotherZombie(CCSPlayerController* pVictimController, std::vector<S
 // the variable gets decreased by 20 every round
 void ZR_InitialInfection()
 {
-	if (!GetGlobals())
-		return;
+    // 检查全局变量是否可用
+    if (!GetGlobals())
+        return;
 
-	// mz infection candidates
-	CUtlVector<CCSPlayerController*> pCandidateControllers;
-	for (int i = 0; i < GetGlobals()->maxClients; i++)
-	{
-		CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
-		if (!pController || !pController->IsConnected() || pController->m_iTeamNum() != CS_TEAM_CT)
-			continue;
+    // 创建一个向量存储所有可以被选为母体僵尸的玩家控制器
+    CUtlVector<CCSPlayerController*> pCandidateControllers;
+    for (int i = 0; i < GetGlobals()->maxClients; i++)
+    {
+        // 获取玩家控制器
+        CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
+        // 检查玩家是否已连接且在CT阵营(人类阵营)
+        if (!pController || !pController->IsConnected() || pController->m_iTeamNum() != CS_TEAM_CT)
+            continue;
 
-		CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
-		if (!pPawn || !pPawn->IsAlive())
-			continue;
+        // 获取玩家角色模型并检查是否存活
+        CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
+        if (!pPawn || !pPawn->IsAlive())
+            continue;
 
-		pCandidateControllers.AddToTail(pController);
-	}
+        // 将符合条件的玩家添加到候选列表
+        pCandidateControllers.AddToTail(pController);
+    }
 
-	if (g_cvarInfectSpawnMZRatio.Get() <= 0)
-	{
-		Warning("Invalid Mother Zombie Ratio!!!");
-		return;
-	}
+    // 检查母体僵尸比例设置是否有效
+    if (g_cvarInfectSpawnMZRatio.Get() <= 0)
+    {
+        Warning("Invalid Mother Zombie Ratio!!!");
+        return;
+    }
 
-	// the num of mz to infect
-	int iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
-	iMZToInfect = g_cvarInfectSpawnMinCount.Get() > iMZToInfect ? g_cvarInfectSpawnMinCount.Get() : iMZToInfect;
-	bool vecIsMZ[MAXPLAYERS] = {false};
+    // 计算需要感染的母体僵尸数量
+    // 根据玩家总数除以设定的比例,确保至少有最小数量的母体僵尸
+    int iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
+    iMZToInfect = g_cvarInfectSpawnMinCount.Get() > iMZToInfect ? g_cvarInfectSpawnMinCount.Get() : iMZToInfect;
+    bool vecIsMZ[MAXPLAYERS] = {false}; // 记录哪些玩家已经被选为母体僵尸
 
-	// get spawn points
-	std::vector<SpawnPoint*> spawns = ZR_GetSpawns();
-	if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN && !spawns.size())
-	{
-		ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "There are no spawns!");
-		return;
-	}
+    // 获取重生点位置
+    std::vector<SpawnPoint*> spawns = ZR_GetSpawns();
+    // 如果重生类型设置为RESPAWN但没有重生点,则发出警告并退出
+    if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN && !spawns.size())
+    {
+        ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "There are no spawns!");
+        return;
+    }
 
-	// infect
-	int iFailSafeCounter = 0;
-	while (iMZToInfect > 0)
-	{
-		// If we somehow don't have enough mother zombies after going through the players 5 times,
-		if (iFailSafeCounter >= 5)
-		{
-			FOR_EACH_VEC(pCandidateControllers, i)
-			{
-				// at 5, reset everyone's immunity but mother zombies from this and last round
-				// at 6, reset everyone's immunity but mother zombies from this round
-				ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
-				if (pPlayer->GetImmunity() < 100 || (iFailSafeCounter >= 6 && !vecIsMZ[i]))
-					pPlayer->SetImmunity(0);
-			}
-		}
+    // 开始感染过程
+    int iFailSafeCounter = 0; // 防止无限循环的计数器
+    while (iMZToInfect > 0)
+    {
+        // 故障保护机制:如果循环5次以上仍未选出足够的母体僵尸
+        if (iFailSafeCounter >= 5)
+        {
+            FOR_EACH_VEC(pCandidateControllers, i)
+            {
+                // 在第5次循环:重置所有非母体僵尸的免疫力
+                // 在第6次循环:重置所有玩家的免疫力(除了本轮已选的母体僵尸)
+                ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
+                if (pPlayer->GetImmunity() < 100 || (iFailSafeCounter >= 6 && !vecIsMZ[i]))
+                    pPlayer->SetImmunity(0);
+            }
+        }
 
-		// a list of player who survived the previous mz roll of this round
-		CUtlVector<CCSPlayerController*> pSurvivorControllers;
-		FOR_EACH_VEC(pCandidateControllers, i)
-		{
-			// don't even bother with picked mz or player with 100 immunity
-			ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
-			if (pPlayer && pPlayer->GetImmunity() < 100)
-				pSurvivorControllers.AddToTail(pCandidateControllers[i]);
-		}
+        // 创建一个列表,存储上一轮母体僵尸选择中幸存的玩家
+        CUtlVector<CCSPlayerController*> pSurvivorControllers;
+        FOR_EACH_VEC(pCandidateControllers, i)
+        {
+            // 跳过已经被选为母体僵尸或拥有100%免疫力的玩家
+            ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
+            if (pPlayer && pPlayer->GetImmunity() < 100)
+                pSurvivorControllers.AddToTail(pCandidateControllers[i]);
+        }
 
-		// no enough human even after triggering fail safe
-		if (iFailSafeCounter >= 6 && pSurvivorControllers.Count() == 0)
-			break;
+        // 如果触发最后的故障保护后仍没有可选的人类,则退出循环
+        if (iFailSafeCounter >= 6 && pSurvivorControllers.Count() == 0)
+            break;
 
-		while (pSurvivorControllers.Count() > 0 && iMZToInfect > 0)
-		{
-			int randomindex = rand() % pSurvivorControllers.Count();
+        // 随机选择玩家作为母体僵尸
+        while (pSurvivorControllers.Count() > 0 && iMZToInfect > 0)
+        {
+            // 随机选择一个玩家索引
+            int randomindex = rand() % pSurvivorControllers.Count();
 
-			CCSPlayerController* pController = (CCSPlayerController*)pSurvivorControllers[randomindex];
-			CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
-			ZEPlayer* pPlayer = pSurvivorControllers[randomindex]->GetZEPlayer();
-			// roll for immunity
-			if (rand() % 100 < pPlayer->GetImmunity())
-			{
-				pSurvivorControllers.FastRemove(randomindex);
-				continue;
-			}
+            CCSPlayerController* pController = (CCSPlayerController*)pSurvivorControllers[randomindex];
+            CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
+            ZEPlayer* pPlayer = pSurvivorControllers[randomindex]->GetZEPlayer();
+            
+            // 检查玩家免疫力,如果随机数小于玩家免疫力,则跳过该玩家
+            if (rand() % 100 < pPlayer->GetImmunity())
+            {
+                pSurvivorControllers.FastRemove(randomindex);
+                continue;
+            }
 
-			ZR_InfectMotherZombie(pController, spawns);
-			pPlayer->SetImmunity(100);
-			vecIsMZ[pPlayer->GetPlayerSlot().Get()] = true;
+            // 将玩家感染为母体僵尸
+            ZR_InfectMotherZombie(pController, spawns);
+            pPlayer->SetImmunity(100); // 设置100%免疫力,防止再次被选中
+            vecIsMZ[pPlayer->GetPlayerSlot().Get()] = true; // 标记为母体僵尸
 
-			iMZToInfect--;
-		}
-		iFailSafeCounter++;
-	}
+            iMZToInfect--; // 减少需要感染的母体僵尸数量
+        }
+        iFailSafeCounter++; // 增加故障保护计数器
+    }
 
-	// reduce everyone's immunity except mz
-	for (int i = 0; i < GetGlobals()->maxClients; i++)
-	{
-		ZEPlayer* pPlayer = g_playerManager->GetPlayer(i);
-		if (!pPlayer || vecIsMZ[i])
-			continue;
+    // 为所有非母体僵尸的玩家减少免疫力
+    for (int i = 0; i < GetGlobals()->maxClients; i++)
+    {
+        ZEPlayer* pPlayer = g_playerManager->GetPlayer(i);
+        if (!pPlayer || vecIsMZ[i])
+            continue;
 
-		pPlayer->SetImmunity(pPlayer->GetImmunity() - g_cvarMZImmunityReduction.Get());
-	}
+        // 根据设置减少玩家的免疫力
+        pPlayer->SetImmunity(pPlayer->GetImmunity() - g_cvarMZImmunityReduction.Get());
+    }
 
-	if (g_cvarRespawnDelay.Get() < 0.0f)
-		g_bRespawnEnabled = false;
+    // 如果重生延迟设置为负值,则禁用重生功能
+    if (g_cvarRespawnDelay.Get() < 0.0f)
+        g_bRespawnEnabled = false;
 
-	ClientPrintAll(HUD_PRINTCENTER, "First infection has started!");
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "First infection has started! Good luck, survivors!");
-	g_ZRRoundState = EZRRoundState::POST_INFECTION;
+    // 向所有玩家发送第一波感染已开始的消息
+    ClientPrintAll(HUD_PRINTCENTER, "First infection has started!");
+    ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "First infection has started! Good luck, survivors!");
+    
+    // 更新回合状态为感染后阶段
+    g_ZRRoundState = EZRRoundState::POST_INFECTION;
 }
 
 void ZR_StartInitialCountdown()
@@ -1554,27 +1572,33 @@ void ZR_Detour_CEntityIdentity_AcceptInput(CEntityIdentity* pThis, CUtlSymbolLar
 
 void SpawnPlayer(CCSPlayerController* pController)
 {
-	pController->ChangeTeam(g_ZRRoundState == EZRRoundState::POST_INFECTION ? CS_TEAM_T : CS_TEAM_CT);
+    // 根据配置决定玩家加入哪个阵营
+    // 如果g_cvarAlwaysJoinCT为true,则总是加入CT阵营
+    // 否则按照原来的逻辑,感染后加入T阵营,感染前加入CT阵营
+    if (g_cvarAlwaysJoinCT.Get())
+        pController->ChangeTeam(CS_TEAM_CT);
+    else
+        pController->ChangeTeam(g_ZRRoundState == EZRRoundState::POST_INFECTION ? CS_TEAM_T : CS_TEAM_CT);
 
-	// Make sure the round ends if spawning into an empty server
-	if (!ZR_IsTeamAlive(CS_TEAM_CT) && !ZR_IsTeamAlive(CS_TEAM_T) && g_ZRRoundState != EZRRoundState::ROUND_END)
-	{
-		if (!g_pGameRules)
-			return;
+    // Make sure the round ends if spawning into an empty server
+    if (!ZR_IsTeamAlive(CS_TEAM_CT) && !ZR_IsTeamAlive(CS_TEAM_T) && g_ZRRoundState != EZRRoundState::ROUND_END)
+    {
+        if (!g_pGameRules)
+            return;
 
-		g_pGameRules->TerminateRound(1.0f, CSRoundEndReason::GameStart);
-		g_ZRRoundState = EZRRoundState::ROUND_END;
-		return;
-	}
+        g_pGameRules->TerminateRound(1.0f, CSRoundEndReason::GameStart);
+        g_ZRRoundState = EZRRoundState::ROUND_END;
+        return;
+    }
 
-	CHandle<CCSPlayerController> handle = pController->GetHandle();
-	new CTimer(2.0f, false, false, [handle]() {
-		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
-		if (!pController || !g_bRespawnEnabled || pController->m_iTeamNum < CS_TEAM_T)
-			return -1.0f;
-		pController->Respawn();
-		return -1.0f;
-	});
+    CHandle<CCSPlayerController> handle = pController->GetHandle();
+    new CTimer(2.0f, false, false, [handle]() {
+        CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
+        if (!pController || !g_bRespawnEnabled || pController->m_iTeamNum < CS_TEAM_T)
+            return -1.0f;
+        pController->Respawn();
+        return -1.0f;
+    });
 }
 
 void ZR_Hook_ClientPutInServer(CPlayerSlot slot, char const* pszName, int type, uint64 xuid)
