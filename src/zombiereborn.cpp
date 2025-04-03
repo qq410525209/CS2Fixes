@@ -1012,7 +1012,7 @@ void SetupCTeams()
 
 void ZR_OnRoundStart(IGameEvent* pEvent)
 {
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "The game is \x05Humans vs. Zombies\x01, the goal for zombies is to infect all humans by knifing them.");
+	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "进行无尽的训练和跑图吧,勇者们,加油!.");
 	SetupRespawnToggler();
 	CZRRegenTimer::RemoveAllTimers();
 
@@ -1044,7 +1044,7 @@ void ZR_OnPlayerSpawn(CCSPlayerController* pController)
 	if (bInfect)
 	{
 		pController->GetPawn()->m_bTakesDamage(false);
-		pController->SwitchTeam(CS_TEAM_T);
+		pController->SwitchTeam(CS_TEAM_CT);
 	}
 	else
 	{
