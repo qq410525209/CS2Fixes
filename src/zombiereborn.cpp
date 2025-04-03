@@ -71,33 +71,33 @@ CZRPlayerClassManager* g_pZRPlayerClassManager = nullptr;
 ZRWeaponConfig* g_pZRWeaponConfig = nullptr;
 ZRHitgroupConfig* g_pZRHitgroupConfig = nullptr;
 
-CConVar<bool> g_cvarEnableZR("zr_enable", FCVAR_NONE, "Whether to enable ZR features", false);
-CConVar<float> g_cvarMaxZteleDistance("zr_ztele_max_distance", FCVAR_NONE, "Maximum distance players are allowed to move after starting ztele", 150.0f, true, 0.0f, false, 0.0f);
-CConVar<bool> g_cvarZteleHuman("zr_ztele_allow_humans", FCVAR_NONE, "Whether to allow humans to use ztele", false);
-CConVar<float> g_cvarKnockbackScale("zr_knockback_scale", FCVAR_NONE, "Global knockback scale", 5.0f);
-CConVar<int> g_cvarInfectSpawnType("zr_infect_spawn_type", FCVAR_NONE, "Type of Mother Zombies Spawn [0 = MZ spawn where they stand, 1 = MZ get teleported back to spawn on being picked]", (int)EZRSpawnType::RESPAWN, true, 0, true, 1);
-CConVar<int> g_cvarInfectSpawnTimeMin("zr_infect_spawn_time_min", FCVAR_NONE, "Minimum time in which Mother Zombies should be picked, after round start", 15, true, 0, false, 0);
-CConVar<int> g_cvarInfectSpawnTimeMax("zr_infect_spawn_time_max", FCVAR_NONE, "Maximum time in which Mother Zombies should be picked, after round start", 15, true, 1, false, 0);
-CConVar<int> g_cvarInfectSpawnMZRatio("zr_infect_spawn_mz_ratio", FCVAR_NONE, "Ratio of all Players to Mother Zombies to be spawned at round start", 7, true, 1, true, 64);
-CConVar<int> g_cvarInfectSpawnMinCount("zr_infect_spawn_mz_min_count", FCVAR_NONE, "Minimum amount of Mother Zombies to be spawned at round start", 1, true, 0, false, 0);
-CConVar<float> g_cvarRespawnDelay("zr_respawn_delay", FCVAR_NONE, "Time before a zombie is automatically respawned, -1 disables this. Note that maps can still manually respawn at any time", 5.0f, true, -1.0f, false, 0.0f);
-CConVar<int> g_cvarDefaultWinnerTeam("zr_default_winner_team", FCVAR_NONE, "Which team wins when time ran out [1 = Draw, 2 = Zombies, 3 = Humans]", CS_TEAM_SPECTATOR, true, 1, true, 3);
-CConVar<int> g_cvarMZImmunityReduction("zr_mz_immunity_reduction", FCVAR_NONE, "How much mz immunity to reduce for each player per round (0-100)", 20, true, 0, true, 100);
-CConVar<int> g_cvarGroanChance("zr_sounds_groan_chance", FCVAR_NONE, "How likely should a zombie groan whenever they take damage (1 / N)", 5, true, 1, false, 0);
-CConVar<float> g_cvarMoanInterval("zr_sounds_moan_interval", FCVAR_NONE, "How often in seconds should zombies moan", 30.0f, true, 0.0f, false, 0.0f);
-CConVar<bool> g_cvarNapalmGrenades("zr_napalm_enable", FCVAR_NONE, "Whether to use napalm grenades", true);
-CConVar<float> g_cvarNapalmDuration("zr_napalm_burn_duration", FCVAR_NONE, "How long in seconds should zombies burn from napalm grenades", 5.0f, true, 0.0f, false, 0.0f);
-CConVar<float> g_cvarNapalmFullDamage("zr_napalm_full_damage", FCVAR_NONE, "The amount of damage needed to apply full burn duration for napalm grenades (max grenade damage is 99)", 50.0f, true, 0.0f, true, 99.0f);
-CConVar<CUtlString> g_cvarHumanWinOverlayParticle("zr_human_win_overlay_particle", FCVAR_NONE, "Screenspace particle to display when human win", "");
-CConVar<CUtlString> g_cvarHumanWinOverlayMaterial("zr_human_win_overlay_material", FCVAR_NONE, "Material override for human's win overlay particle", "");
-CConVar<float> g_cvarHumanWinOverlaySize("zr_human_win_overlay_size", FCVAR_NONE, "Size of human's win overlay particle", 100.0f, true, 0.0f, true, 100.0f);
-CConVar<CUtlString> g_cvarZombieWinOverlayParticle("zr_zombie_win_overlay_particle", FCVAR_NONE, "Screenspace particle to display when zombie win", "");
-CConVar<CUtlString> g_cvarZombieWinOverlayMaterial("zr_zombie_win_overlay_material", FCVAR_NONE, "Material override for zombie's win overlay particle", "");
-CConVar<float> g_cvarZombieWinOverlaySize("zr_zombie_win_overlay_size", FCVAR_NONE, "Size of zombie's win overlay particle", 100.0f, true, 0.0f, true, 100.0f);
-CConVar<bool> g_cvarInfectShake("zr_infect_shake", FCVAR_NONE, "Whether to shake a player's view on infect", true);
-CConVar<float> g_cvarInfectShakeAmplitude("zr_infect_shake_amp", FCVAR_NONE, "Amplitude of shaking effect", 15.0f, true, 0.0f, true, 16.0f);
-CConVar<float> g_cvarInfectShakeFrequency("zr_infect_shake_frequency", FCVAR_NONE, "Frequency of shaking effect", 2.0f, true, 0.0f, false, 0.0f);
-CConVar<float> g_cvarInfectShakeDuration("zr_infect_shake_duration", FCVAR_NONE, "Duration of shaking effect", 5.0f, true, 0.0f, false, 0.0f);
+CConVar<bool> g_cvarEnableZR("zr_enable", FCVAR_NONE, "是否启用僵尸重生功能", false);
+CConVar<float> g_cvarMaxZteleDistance("zr_ztele_max_distance", FCVAR_NONE, "玩家开始传送后允许移动的最大距离", 150.0f, true, 0.0f, false, 0.0f);
+CConVar<bool> g_cvarZteleHuman("zr_ztele_allow_humans", FCVAR_NONE, "是否允许人类使用传送功能", false);
+CConVar<float> g_cvarKnockbackScale("zr_knockback_scale", FCVAR_NONE, "全局击退系数", 5.0f);
+CConVar<int> g_cvarInfectSpawnType("zr_infect_spawn_type", FCVAR_NONE, "母体僵尸生成类型 [0 = 母体僵尸在原地生成, 1 = 母体僵尸被选中后传送回出生点]", (int)EZRSpawnType::RESPAWN, true, 0, true, 1);
+CConVar<int> g_cvarInfectSpawnTimeMin("zr_infect_spawn_time_min", FCVAR_NONE, "回合开始后选取母体僵尸的最小时间", 15, true, 0, false, 0);
+CConVar<int> g_cvarInfectSpawnTimeMax("zr_infect_spawn_time_max", FCVAR_NONE, "回合开始后选取母体僵尸的最大时间", 15, true, 1, false, 0);
+CConVar<int> g_cvarInfectSpawnMZRatio("zr_infect_spawn_mz_ratio", FCVAR_NONE, "回合开始时全部玩家与母体僵尸的比例", 7, true, 0, true, 64);
+CConVar<int> g_cvarInfectSpawnMinCount("zr_infect_spawn_mz_min_count", FCVAR_NONE, "回合开始时生成的最小母体僵尸数量", 1, true, 0, false, 0);
+CConVar<float> g_cvarRespawnDelay("zr_respawn_delay", FCVAR_NONE, "僵尸自动重生前的时间, -1表示禁用此功能。注意地图仍可随时手动重生", 5.0f, true, -1.0f, false, 0.0f);
+CConVar<int> g_cvarDefaultWinnerTeam("zr_default_winner_team", FCVAR_NONE, "时间结束时获胜的队伍 [1 = 平局, 2 = 僵尸, 3 = 人类]", CS_TEAM_SPECTATOR, true, 1, true, 3);
+CConVar<int> g_cvarMZImmunityReduction("zr_mz_immunity_reduction", FCVAR_NONE, "每回合减少每个玩家的母体免疫值的量 (0-100)", 20, true, 0, true, 100);
+CConVar<int> g_cvarGroanChance("zr_sounds_groan_chance", FCVAR_NONE, "僵尸受到伤害时发出呻吟的概率 (1 / N)", 5, true, 1, false, 0);
+CConVar<float> g_cvarMoanInterval("zr_sounds_moan_interval", FCVAR_NONE, "僵尸发出呻吟的间隔时间(秒)", 30.0f, true, 0.0f, false, 0.0f);
+CConVar<bool> g_cvarNapalmGrenades("zr_napalm_enable", FCVAR_NONE, "是否启用燃烧手雷", true);
+CConVar<float> g_cvarNapalmDuration("zr_napalm_burn_duration", FCVAR_NONE, "燃烧手雷使僵尸燃烧的持续时间(秒)", 5.0f, true, 0.0f, false, 0.0f);
+CConVar<float> g_cvarNapalmFullDamage("zr_napalm_full_damage", FCVAR_NONE, "应用完整燃烧持续时间所需的伤害量(手雷最大伤害为99)", 50.0f, true, 0.0f, true, 99.0f);
+CConVar<CUtlString> g_cvarHumanWinOverlayParticle("zr_human_win_overlay_particle", FCVAR_NONE, "人类获胜时显示的屏幕空间粒子效果", "");
+CConVar<CUtlString> g_cvarHumanWinOverlayMaterial("zr_human_win_overlay_material", FCVAR_NONE, "人类获胜覆盖粒子的材质覆盖", "");
+CConVar<float> g_cvarHumanWinOverlaySize("zr_human_win_overlay_size", FCVAR_NONE, "人类获胜覆盖粒子的大小", 100.0f, true, 0.0f, true, 100.0f);
+CConVar<CUtlString> g_cvarZombieWinOverlayParticle("zr_zombie_win_overlay_particle", FCVAR_NONE, "僵尸获胜时显示的屏幕空间粒子效果", "");
+CConVar<CUtlString> g_cvarZombieWinOverlayMaterial("zr_zombie_win_overlay_material", FCVAR_NONE, "僵尸获胜覆盖粒子的材质覆盖", "");
+CConVar<float> g_cvarZombieWinOverlaySize("zr_zombie_win_overlay_size", FCVAR_NONE, "僵尸获胜覆盖粒子的大小", 100.0f, true, 0.0f, true, 100.0f);
+CConVar<bool> g_cvarInfectShake("zr_infect_shake", FCVAR_NONE, "是否在感染时震动玩家视角", true);
+CConVar<float> g_cvarInfectShakeAmplitude("zr_infect_shake_amp", FCVAR_NONE, "震动效果的幅度", 15.0f, true, 0.0f, true, 16.0f);
+CConVar<float> g_cvarInfectShakeFrequency("zr_infect_shake_frequency", FCVAR_NONE, "震动效果的频率", 2.0f, true, 0.0f, false, 0.0f);
+CConVar<float> g_cvarInfectShakeDuration("zr_infect_shake_duration", FCVAR_NONE, "震动效果的持续时间", 5.0f, true, 0.0f, false, 0.0f);
 
 // meant only for offline config validation and can easily cause issues when used on live server
 #ifdef _DEBUG
@@ -1347,14 +1347,12 @@ void ZR_InitialInfection()
 		pCandidateControllers.AddToTail(pController);
 	}
 
-	if (g_cvarInfectSpawnMZRatio.Get() <= 0)
-	{
-		Warning("Invalid Mother Zombie Ratio!!!");
-		return;
+	int iMZToInfect = 0;
+	if (g_cvarInfectSpawnMZRatio.Get() > 0) {
+		iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
+	} else {
+		iMZToInfect = 0; // 当比例设为0时，不生成母体僵尸
 	}
-
-	// the num of mz to infect
-	int iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
 	iMZToInfect = g_cvarInfectSpawnMinCount.Get() > iMZToInfect ? g_cvarInfectSpawnMinCount.Get() : iMZToInfect;
 	bool vecIsMZ[MAXPLAYERS] = {false};
 
