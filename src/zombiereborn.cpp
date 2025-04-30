@@ -1449,7 +1449,7 @@ void ZR_StartInitialCountdown()
 			return -1.0f;
 		if (g_iInfectionCountDown <= 0)
 		{
-			ZR_InitialInfection();
+			// ZR_InitialInfection(); // 禁用初始感染
 			return -1.0f;
 		}
 
