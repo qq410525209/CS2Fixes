@@ -4,21 +4,17 @@
  * Copyright (C) 2023-2025 Source2ZE
  * =============================================================================
  *
- * 僵尸重生(Zombie Reborn)模式实现文件
- * 这个文件实现了CS2中的僵尸模式,包括:
- * - 玩家感染系统:将人类玩家转变为僵尸
- * - 母体僵尸选择系统:从人类中随机选择初始僵尸
- * - 玩家类别系统:不同类型的人类和僵尸角色
- * - 击退系统:人类武器对僵尸造成的击退效果
- * - 回合管理:检查胜利条件、结束回合、计分等
- * 
- * 本程序是自由软件;您可以根据自由软件基金会发布的GNU通用公共许可证(版本3.0)
- * 重新分发和/或修改它。
+ * This program is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, version 3.0, as published by the
+ * Free Software Foundation.
  *
- * 本程序的分发是希望它是有用的,但没有任何担保;甚至没有对适销性或特定用途适用性的暗示担保。
- * 有关更多详细信息,请参阅GNU通用公共许可证。
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+ * FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more
+ * details.
  *
- * 您应该已经收到GNU通用公共许可证的副本。如果没有,请参阅<http://www.gnu.org/licenses/>。
+ * You should have received a copy of the GNU General Public License along with
+ * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "usermessages.pb.h"
@@ -1126,6 +1122,7 @@ void ZR_FakePlayerDeath(CCSPlayerController* pAttackerController, CCSPlayerContr
 	g_gameEventManager->FireEvent(pEvent, bDontBroadcast);
 }
 
+// T给刀,CT给甲
 void ZR_StripAndGiveKnife(CCSPlayerPawn* pPawn)
 {
 	CCSPlayer_ItemServices* pItemServices = pPawn->m_pItemServices();
@@ -1249,96 +1246,82 @@ std::vector<SpawnPoint*> ZR_GetSpawns()
 
 void ZR_Infect(CCSPlayerController* pAttackerController, CCSPlayerController* pVictimController, bool bDontBroadcast)
 {
-	// 如果被感染玩家不存在或不在CT队伍(人类队伍),则不执行感染
-	if (!pVictimController || pVictimController->m_iTeamNum() != CS_TEAM_CT)
-		return;
-
-	// 获取被感染玩家的Pawn实体
-	CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pVictimController->GetPawn();
-	if (!pPawn)
-		return;
-
-	// 如果玩家已经死亡,则不执行感染
-	if (!pPawn->IsAlive())
-		return;
-
-	// 创建一个假的玩家死亡事件,不广播给客户端
-	ZR_FakePlayerDeath(pAttackerController, pVictimController, pAttackerController ? "knife" : "", bDontBroadcast);
-
-	// 将玩家切换到T队伍(僵尸队伍)
-	pVictimController->SwitchTeam(CS_TEAM_CT);
-
-	// 添加感染效果的屏幕震动
-	ZR_InfectShake(pVictimController);
-
-	// 设置超速状态(如果有此功能)
-	ZEPlayer* pZEPlayer = pVictimController->GetZEPlayer();
-	if (pZEPlayer)
-	{
-		pZEPlayer->SetSuperSpeed(false);
-	}
-
-	// 检查CT队伍是否还有存活玩家,如果没有,则判定T队伍(僵尸)获胜
-	if (!ZR_CheckTeamWinConditions(CS_TEAM_T))
-	{
-		// 创建一个延迟1帧的计时器,使用僵尸类的设置来重生玩家
-		CHandle<CCSPlayerController> handle = pVictimController->GetHandle();
-		new CTimer(0.1f, false, false, [handle]() {
-			CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
-			if (!pController)
-				return -1.0f;
-
-			CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
-			if (!pPawn)
-				return -1.0f;
-
-			// 应用默认或用户首选的僵尸类别
-			g_pZRPlayerClassManager->ApplyPreferredOrDefaultZombieClass(pPawn);
-
-			// 如果未启用重生功能,则检查CT队伍(僵尸)是否获胜
-			if (!g_bRespawnEnabled)
-				ZR_CheckTeamWinConditions(CS_TEAM_T);
-
-			return -1.0f;
-		});
-	}
-}
-
-void ZR_InfectMotherZombie(CCSPlayerController* pVictimController, std::vector<SpawnPoint*> spawns)
-{
-	// 如果被选为母体僵尸的玩家不存在,则退出
+	// This can be null if the victim disconnected right before getting hit AND someone joined in their place immediately, thus replacing the controller
 	if (!pVictimController)
 		return;
 
-	// 获取玩家的Pawn实体
-	CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pVictimController->GetPawn();
-	if (!pPawn)
+	if (pVictimController->m_iTeamNum() == CS_TEAM_CT)
+		pVictimController->SwitchTeam(CS_TEAM_T);
+
+	ZR_CheckTeamWinConditions(CS_TEAM_T);
+
+	ZR_FakePlayerDeath(pAttackerController, pVictimController, "knife", bDontBroadcast); // or any other killicon
+
+	CCSPlayerPawn* pVictimPawn = (CCSPlayerPawn*)pVictimController->GetPawn();
+	if (!pVictimPawn)
 		return;
 
-	// 如果玩家已经不是人类(CT),则退出
-	if (pVictimController->m_iTeamNum() != CS_TEAM_CT)
-		return;
+	// We disabled damage due to the delayed infection, restore
+	pVictimPawn->m_bTakesDamage(true);
 
-	// 根据设置的母体僵尸生成类型进行处理
-	if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN && spawns.size() > 0)
+	pVictimPawn->EmitSound("zr.amb.scream");
+
+	ZR_StripAndGiveKnife(pVictimPawn);
+
+	g_pZRPlayerClassManager->ApplyPreferredOrDefaultZombieClass(pVictimPawn);
+
+	ZR_InfectShake(pVictimController);
+
+	ZEPlayer* pZEPlayer = pVictimController->GetZEPlayer();
+
+	if (pZEPlayer && !pZEPlayer->IsInfected())
 	{
-		// 获取一个随机的重生点
-		SpawnPoint* pSpawnPoint = spawns[rand() % spawns.size()];
+		pZEPlayer->SetInfectState(true);
 
-		// 重置玩家的速度,避免被传送后仍保持移动
-		pPawn->m_vecAbsVelocity().x = 0.0f;
-		pPawn->m_vecAbsVelocity().y = 0.0f;
-		pPawn->m_vecAbsVelocity().z = 0.0f;
+		ZEPlayerHandle hPlayer = pZEPlayer->GetHandle();
+		new CTimer(g_cvarMoanInterval.Get() + (rand() % 5), false, false, [hPlayer]() { return ZR_MoanTimer(hPlayer); });
+	}
+}
 
-		// 将玩家传送到重生点
-		pPawn->Teleport(&pSpawnPoint->GetOrigin(), &pSpawnPoint->GetAngles(), nullptr);
+// 疑似给T发刀
+void ZR_InfectMotherZombie(CCSPlayerController* pVictimController, std::vector<SpawnPoint*> spawns)
+{
+	CCSPlayerPawn* pVictimPawn = (CCSPlayerPawn*)pVictimController->GetPawn();
+	if (!pVictimPawn)
+		return;
+
+	pVictimController->SwitchTeam(CS_TEAM_T);
+
+	ZR_FakePlayerDeath(pVictimController, pVictimController, "knife", true); // not sent to clients
+
+	ZR_StripAndGiveKnife(pVictimPawn);
+
+	// pick random spawn point
+	if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN)
+	{
+		int randomindex = rand() % spawns.size();
+		Vector origin = spawns[randomindex]->GetAbsOrigin();
+		QAngle rotation = spawns[randomindex]->GetAbsRotation();
+
+		pVictimPawn->Teleport(&origin, &rotation, &vec3_origin);
 	}
 
-	// 对玩家执行感染处理,并广播感染消息
-	ZR_Infect(nullptr, pVictimController, false);
+	pVictimPawn->EmitSound("zr.amb.scream");
 
-	// 向所有玩家发送消息,告知谁是母体僵尸
-	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "%s 已被选为母体僵尸!", pVictimController->GetPlayerName());
+	std::shared_ptr<ZRZombieClass> pClass = g_pZRPlayerClassManager->GetZombieClass("MotherZombie");
+	if (pClass)
+		g_pZRPlayerClassManager->ApplyZombieClass(pClass, pVictimPawn);
+	else
+		g_pZRPlayerClassManager->ApplyPreferredOrDefaultZombieClass(pVictimPawn);
+
+	ZR_InfectShake(pVictimController);
+
+	ZEPlayer* pZEPlayer = pVictimController->GetZEPlayer();
+
+	pZEPlayer->SetInfectState(true);
+
+	ZEPlayerHandle hPlayer = pZEPlayer->GetHandle();
+	new CTimer(g_cvarMoanInterval.Get() + (rand() % 5), false, false, [hPlayer]() { return ZR_MoanTimer(hPlayer); });
 }
 
 // make players who've been picked as MZ recently less likely to be picked again
@@ -1348,180 +1331,142 @@ void ZR_InfectMotherZombie(CCSPlayerController* pVictimController, std::vector<S
 // the variable gets decreased by 20 every round
 void ZR_InitialInfection()
 {
-    // 检查全局变量是否可用
-    if (!GetGlobals())
-        return;
-
-    // 创建一个向量存储所有可以被选为母体僵尸的玩家控制器
-    CUtlVector<CCSPlayerController*> pCandidateControllers;
-    for (int i = 0; i < GetGlobals()->maxClients; i++)
-    {
-        // 获取玩家控制器
-        CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
-        // 检查玩家是否已连接且在CT阵营(人类阵营)
-        if (!pController || !pController->IsConnected() || pController->m_iTeamNum() != CS_TEAM_CT)
-            continue;
-
-        // 获取玩家角色模型并检查是否存活
-        CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
-        if (!pPawn || !pPawn->IsAlive())
-            continue;
-
-        // 将符合条件的玩家添加到候选列表
-        pCandidateControllers.AddToTail(pController);
-    }
-
-    // 检查母体僵尸比例设置是否有效
-    if (g_cvarInfectSpawnMZRatio.Get() <= 0)
-    {
-        Warning("母体僵尸比例设置无效!!!");
-        return;
-    }
-
-    // 计算需要感染的母体僵尸数量
-    // 根据玩家总数除以设定的比例,确保至少有最小数量的母体僵尸
-    int iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
-    iMZToInfect = g_cvarInfectSpawnMinCount.Get() > iMZToInfect ? g_cvarInfectSpawnMinCount.Get() : iMZToInfect;
-    bool vecIsMZ[MAXPLAYERS] = {false}; // 记录哪些玩家已经被选为母体僵尸
-
-    // 获取重生点位置
-    std::vector<SpawnPoint*> spawns = ZR_GetSpawns();
-    // 如果重生类型设置为RESPAWN但没有重生点,则发出警告并退出
-    if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN && !spawns.size())
-    {
-        ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "地图上没有重生点!");
-        return;
-    }
-
-    // 开始感染过程
-    int iFailSafeCounter = 0; // 防止无限循环的计数器
-    while (iMZToInfect > 0)
-    {
-        // 故障保护机制:如果循环5次以上仍未选出足够的母体僵尸
-        if (iFailSafeCounter >= 5)
-        {
-            FOR_EACH_VEC(pCandidateControllers, i)
-            {
-                // 在第5次循环:重置所有非母体僵尸的免疫力
-                // 在第6次循环:重置所有玩家的免疫力(除了本轮已选的母体僵尸)
-                ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
-                if (pPlayer->GetImmunity() < 100 || (iFailSafeCounter >= 6 && !vecIsMZ[i]))
-                    pPlayer->SetImmunity(0);
-            }
-        }
-
-        // 创建一个列表,存储上一轮母体僵尸选择中幸存的玩家
-        CUtlVector<CCSPlayerController*> pSurvivorControllers;
-        FOR_EACH_VEC(pCandidateControllers, i)
-        {
-            // 跳过已经被选为母体僵尸或拥有100%免疫力的玩家
-            ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
-            if (pPlayer && pPlayer->GetImmunity() < 100)
-                pSurvivorControllers.AddToTail(pCandidateControllers[i]);
-        }
-
-        // 如果触发最后的故障保护后仍没有可选的人类,则退出循环
-        if (iFailSafeCounter >= 6 && pSurvivorControllers.Count() == 0)
-            break;
-
-        // 随机选择玩家作为母体僵尸
-        while (pSurvivorControllers.Count() > 0 && iMZToInfect > 0)
-        {
-            // 随机选择一个玩家索引
-            int randomindex = rand() % pSurvivorControllers.Count();
-
-            CCSPlayerController* pController = (CCSPlayerController*)pSurvivorControllers[randomindex];
-            CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
-            ZEPlayer* pPlayer = pSurvivorControllers[randomindex]->GetZEPlayer();
-            
-            // 检查玩家免疫力,如果随机数小于玩家免疫力,则跳过该玩家
-            if (rand() % 100 < pPlayer->GetImmunity())
-            {
-                pSurvivorControllers.FastRemove(randomindex);
-                continue;
-            }
-
-            // 将玩家感染为母体僵尸
-            ZR_InfectMotherZombie(pController, spawns);
-            pPlayer->SetImmunity(100); // 设置100%免疫力,防止再次被选中
-            vecIsMZ[pPlayer->GetPlayerSlot().Get()] = true; // 标记为母体僵尸
-
-            iMZToInfect--; // 减少需要感染的母体僵尸数量
-        }
-        iFailSafeCounter++; // 增加故障保护计数器
-    }
-
-    // 为所有非母体僵尸的玩家减少免疫力
-    for (int i = 0; i < GetGlobals()->maxClients; i++)
-    {
-        ZEPlayer* pPlayer = g_playerManager->GetPlayer(i);
-        if (!pPlayer || vecIsMZ[i])
-            continue;
-
-        // 根据设置减少玩家的免疫力
-        pPlayer->SetImmunity(pPlayer->GetImmunity() - g_cvarMZImmunityReduction.Get());
-    }
-
-    // 如果重生延迟设置为负值,则禁用重生功能
-    if (g_cvarRespawnDelay.Get() < 0.0f)
-        g_bRespawnEnabled = false;
-
-    // 向所有玩家发送第一波感染已开始的消息
-    ClientPrintAll(HUD_PRINTCENTER, "第一波感染已开始!");
-    ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "第一波感染已开始! 祝你好运,幸存者们!");
-    
-    // 更新回合状态为感染后阶段
-    g_ZRRoundState = EZRRoundState::POST_INFECTION;
-}
-
-// 创建并启动初始感染倒计时
-void ZR_StartInitialCountdown()
-{
-	// 不允许多次触发初始感染
-	if (g_ZRRoundState != EZRRoundState::ROUND_START)
+	if (!GetGlobals())
 		return;
 
-	// 获取最小和最大感染时间范围
-	int min = g_cvarInfectSpawnTimeMin.Get();
-	int max = g_cvarInfectSpawnTimeMax.Get();
-
-	// 如果最大时间小于最小时间,则交换它们
-	if (max < min)
+	// mz infection candidates
+	CUtlVector<CCSPlayerController*> pCandidateControllers;
+	for (int i = 0; i < GetGlobals()->maxClients; i++)
 	{
-		int t = min;
-		min = max;
-		max = t;
+		CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
+		if (!pController || !pController->IsConnected() || pController->m_iTeamNum() != CS_TEAM_CT)
+			continue;
+
+		CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
+		if (!pPawn || !pPawn->IsAlive())
+			continue;
+
+		pCandidateControllers.AddToTail(pController);
 	}
 
-	// 在最小和最大时间范围内随机选择一个感染时间点
-	g_iInfectionCountDown = min == max ? min : min + (rand() % (max - min + 1));
+	if (g_cvarInfectSpawnMZRatio.Get() <= 0)
+	{
+		Warning("Invalid Mother Zombie Ratio!!!");
+		return;
+	}
 
-	// 创建一个每秒触发一次的计时器
-	new CTimer(1.0f, true, true, []() {
-		// 如果回合已经结束,则停止倒计时
-		if (g_ZRRoundState == EZRRoundState::ROUND_END)
-			return -1.0f;
+	// the num of mz to infect
+	int iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
+	iMZToInfect = g_cvarInfectSpawnMinCount.Get() > iMZToInfect ? g_cvarInfectSpawnMinCount.Get() : iMZToInfect;
+	bool vecIsMZ[MAXPLAYERS] = {false};
 
-		// 计数器递减
-		g_iInfectionCountDown--;
-		
-		// 根据倒计时剩余时间显示不同的提示消息
-		if (g_iInfectionCountDown > 0)
+	// get spawn points
+	std::vector<SpawnPoint*> spawns = ZR_GetSpawns();
+	if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN && !spawns.size())
+	{
+		ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "There are no spawns!");
+		return;
+	}
+
+	// infect
+	int iFailSafeCounter = 0;
+	while (iMZToInfect > 0)
+	{
+		// If we somehow don't have enough mother zombies after going through the players 5 times,
+		if (iFailSafeCounter >= 5)
 		{
-			// 在关键时间点显示倒计时警告(5秒、10秒、20秒等)
-			if (g_iInfectionCountDown == 5 || g_iInfectionCountDown == 10 || g_iInfectionCountDown == 20 || g_iInfectionCountDown == 30 || g_iInfectionCountDown == 60)
+			FOR_EACH_VEC(pCandidateControllers, i)
 			{
-				ClientPrintAll(HUD_PRINTCENTER, "%d 秒后开始感染", g_iInfectionCountDown);
-				ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "%d 秒后开始感染", g_iInfectionCountDown);
+				// at 5, reset everyone's immunity but mother zombies from this and last round
+				// at 6, reset everyone's immunity but mother zombies from this round
+				ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
+				if (pPlayer->GetImmunity() < 100 || (iFailSafeCounter >= 6 && !vecIsMZ[i]))
+					pPlayer->SetImmunity(0);
 			}
-			return 1.0f; // 继续倒计时
 		}
-		else
+
+		// a list of player who survived the previous mz roll of this round
+		CUtlVector<CCSPlayerController*> pSurvivorControllers;
+		FOR_EACH_VEC(pCandidateControllers, i)
 		{
-			// 倒计时结束,开始执行初始感染
-			ZR_InitialInfection();
-			return -1.0f; // 停止计时器
+			// don't even bother with picked mz or player with 100 immunity
+			ZEPlayer* pPlayer = pCandidateControllers[i]->GetZEPlayer();
+			if (pPlayer && pPlayer->GetImmunity() < 100)
+				pSurvivorControllers.AddToTail(pCandidateControllers[i]);
 		}
+
+		// no enough human even after triggering fail safe
+		if (iFailSafeCounter >= 6 && pSurvivorControllers.Count() == 0)
+			break;
+
+		while (pSurvivorControllers.Count() > 0 && iMZToInfect > 0)
+		{
+			int randomindex = rand() % pSurvivorControllers.Count();
+
+			CCSPlayerController* pController = (CCSPlayerController*)pSurvivorControllers[randomindex];
+			CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
+			ZEPlayer* pPlayer = pSurvivorControllers[randomindex]->GetZEPlayer();
+			// roll for immunity
+			if (rand() % 100 < pPlayer->GetImmunity())
+			{
+				pSurvivorControllers.FastRemove(randomindex);
+				continue;
+			}
+
+			ZR_InfectMotherZombie(pController, spawns);
+			pPlayer->SetImmunity(100);
+			vecIsMZ[pPlayer->GetPlayerSlot().Get()] = true;
+
+			iMZToInfect--;
+		}
+		iFailSafeCounter++;
+	}
+
+	// reduce everyone's immunity except mz
+	for (int i = 0; i < GetGlobals()->maxClients; i++)
+	{
+		ZEPlayer* pPlayer = g_playerManager->GetPlayer(i);
+		if (!pPlayer || vecIsMZ[i])
+			continue;
+
+		pPlayer->SetImmunity(pPlayer->GetImmunity() - g_cvarMZImmunityReduction.Get());
+	}
+
+	if (g_cvarRespawnDelay.Get() < 0.0f)
+		g_bRespawnEnabled = false;
+
+	ClientPrintAll(HUD_PRINTCENTER, "First infection has started!");
+	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "First infection has started! Good luck, survivors!");
+	g_ZRRoundState = EZRRoundState::POST_INFECTION;
+}
+
+void ZR_StartInitialCountdown()
+{
+	if (g_cvarInfectSpawnTimeMin.Get() > g_cvarInfectSpawnTimeMax.Get())
+		g_cvarInfectSpawnTimeMin.Set(g_cvarInfectSpawnTimeMax.Get());
+
+	g_iInfectionCountDown = g_cvarInfectSpawnTimeMin.Get() + (rand() % (g_cvarInfectSpawnTimeMax.Get() - g_cvarInfectSpawnTimeMin.Get() + 1));
+	new CTimer(0.0f, false, false, []() {
+		if (g_ZRRoundState != EZRRoundState::ROUND_START)
+			return -1.0f;
+		if (g_iInfectionCountDown <= 0)
+		{
+			ZR_InitialInfection();
+			return -1.0f;
+		}
+
+		if (g_iInfectionCountDown <= 60)
+		{
+			char message[256];
+			V_snprintf(message, sizeof(message), "First infection in \7%i %s\1!", g_iInfectionCountDown, g_iInfectionCountDown == 1 ? "second" : "seconds");
+
+			ClientPrintAll(HUD_PRINTCENTER, message);
+			if (g_iInfectionCountDown % 5 == 0)
+				ClientPrintAll(HUD_PRINTTALK, "%s%s", ZR_PREFIX, message);
+		}
+		g_iInfectionCountDown--;
+
+		return 1.0f;
 	});
 }
 
@@ -1535,15 +1480,11 @@ bool ZR_Hook_OnTakeDamage_Alive(CTakeDamageInfo* pInfo, CCSPlayerPawn* pVictimPa
 	CCSPlayerController* pAttackerController = CCSPlayerController::FromPawn(pAttackerPawn);
 	CCSPlayerController* pVictimController = CCSPlayerController::FromPawn(pVictimPawn);
 	const char* pszAbilityClass = pInfo->m_hAbility.Get() ? pInfo->m_hAbility.Get()->GetClassname() : "";
-	
-	// 在训练模式下禁用僵尸感染功能
-	/*
 	if (pAttackerPawn->m_iTeamNum() == CS_TEAM_T && pVictimPawn->m_iTeamNum() == CS_TEAM_CT && !V_strncmp(pszAbilityClass, "weapon_knife", 12))
 	{
 		ZR_Infect(pAttackerController, pVictimController, false);
 		return true; // nullify the damage
 	}
-	*/
 
 	if (g_cvarGroanChance.Get() && pVictimPawn->m_iTeamNum() == CS_TEAM_T && (rand() % g_cvarGroanChance.Get()) == 1)
 		pVictimPawn->EmitSound("zr.amb.zombie_pain");
@@ -1615,84 +1556,70 @@ void ZR_Detour_CEntityIdentity_AcceptInput(CEntityIdentity* pThis, CUtlSymbolLar
 
 void SpawnPlayer(CCSPlayerController* pController)
 {
-	// 在训练模式下,玩家始终加入CT阵营(人类阵营),忽略游戏当前阶段
-	pController->ChangeTeam(CS_TEAM_CT);
+	pController->ChangeTeam(g_ZRRoundState == EZRRoundState::POST_INFECTION ? CS_TEAM_T : CS_TEAM_CT);
 
-	// 确保在玩家进入空服务器时结束回合
+	// Make sure the round ends if spawning into an empty server
 	if (!ZR_IsTeamAlive(CS_TEAM_CT) && !ZR_IsTeamAlive(CS_TEAM_T) && g_ZRRoundState != EZRRoundState::ROUND_END)
 	{
 		if (!g_pGameRules)
 			return;
 
-		// 结束当前回合,设置原因为游戏开始
 		g_pGameRules->TerminateRound(1.0f, CSRoundEndReason::GameStart);
 		g_ZRRoundState = EZRRoundState::ROUND_END;
 		return;
 	}
 
-	// 创建一个计时器,2秒后重生玩家
 	CHandle<CCSPlayerController> handle = pController->GetHandle();
 	new CTimer(2.0f, false, false, [handle]() {
 		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
-		// 如果玩家无效,或重生功能已禁用,或玩家不在有效队伍中,则不重生
 		if (!pController || !g_bRespawnEnabled || pController->m_iTeamNum < CS_TEAM_T)
 			return -1.0f;
 		pController->Respawn();
-		return -1.0f; // 返回-1表示这是一次性计时器,不再重复执行
+		return -1.0f;
 	});
 }
 
 void ZR_Hook_ClientPutInServer(CPlayerSlot slot, char const* pszName, int type, uint64 xuid)
 {
-	// 当玩家连接到服务器时触发此钩子
 	CCSPlayerController* pController = CCSPlayerController::FromSlot(slot);
 	if (!pController)
 		return;
 
-	// 调用SpawnPlayer函数使玩家加入游戏
 	SpawnPlayer(pController);
 }
 
 void ZR_Hook_ClientCommand_JoinTeam(CPlayerSlot slot, const CCommand& args)
 {
-	// 当玩家执行加入队伍命令时触发此钩子
 	CCSPlayerController* pController = CCSPlayerController::FromSlot(slot);
 	if (!pController)
 		return;
 
-	// 如果玩家当前活着,先让其自杀
 	CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
 	if (pPawn && pPawn->IsAlive())
 		pPawn->CommitSuicide(false, true);
 
-	// 解析参数:如果玩家要求加入观察者(参数为1),则切换到观察者队伍
 	if (args.ArgC() >= 2 && !V_strcmp(args.Arg(1), "1"))
 		pController->SwitchTeam(CS_TEAM_SPECTATOR);
-	// 如果玩家当前是观察者,则调用SpawnPlayer使其加入游戏
 	else if (pController->m_iTeamNum == CS_TEAM_SPECTATOR)
 		SpawnPlayer(pController);
 }
 
 void ZR_OnPlayerHurt(IGameEvent* pEvent)
 {
-	// 当玩家受伤时触发此事件处理函数
-	// 获取攻击者、受害者以及伤害相关的信息
 	CCSPlayerController* pAttackerController = (CCSPlayerController*)pEvent->GetPlayerController("attacker");
 	CCSPlayerController* pVictimController = (CCSPlayerController*)pEvent->GetPlayerController("userid");
 	const char* szWeapon = pEvent->GetString("weapon");
 	int iDmgHealth = pEvent->GetInt("dmg_health");
 	int iHitGroup = pEvent->GetInt("hitgroup");
 
-	// 手榴弹和燃烧弹的击退效果由TakeDamage拦截器处理,此处不处理
+	// grenade and molotov knockbacks are handled by TakeDamage detours
 	if (!pAttackerController || !pVictimController || !V_strncmp(szWeapon, "inferno", 7) || !V_strncmp(szWeapon, "hegrenade", 9))
 		return;
 
-	// 如果是人类(CT)攻击僵尸(T),则应用击退效果
 	if (pAttackerController->m_iTeamNum() == CS_TEAM_CT && pVictimController->m_iTeamNum() == CS_TEAM_T)
 	{
-		float flClassKnockback = 1.0f; // 默认击退系数为1.0
+		float flClassKnockback = 1.0f;
 
-		// 获取僵尸的类别特定击退系数
 		if (pVictimController->GetZEPlayer())
 		{
 			std::shared_ptr<ZRClass> activeClass = pVictimController->GetZEPlayer()->GetActiveZRClass();
@@ -1701,20 +1628,16 @@ void ZR_OnPlayerHurt(IGameEvent* pEvent)
 				flClassKnockback = static_pointer_cast<ZRZombieClass>(activeClass)->flKnockback;
 		}
 
-		// 应用击退效果
 		ZR_ApplyKnockback((CCSPlayerPawn*)pAttackerController->GetPawn(), (CCSPlayerPawn*)pVictimController->GetPawn(), iDmgHealth, szWeapon, iHitGroup, flClassKnockback);
 	}
 }
 
 void ZR_OnPlayerDeath(IGameEvent* pEvent)
 {
-	// 当玩家死亡时触发此事件处理函数
-	
-	// 如果是感染导致的假死亡事件,不需要重生或检查胜利条件
+	// fake player_death, don't need to respawn or check win condition
 	if (pEvent->GetBool("infected"))
 		return;
 
-	// 获取死亡的玩家控制器和Pawn
 	CCSPlayerController* pVictimController = (CCSPlayerController*)pEvent->GetPlayerController("userid");
 	if (!pVictimController)
 		return;
@@ -1722,14 +1645,12 @@ void ZR_OnPlayerDeath(IGameEvent* pEvent)
 	if (!pVictimPawn)
 		return;
 
-	// 检查对方队伍是否已经获胜(全部消灭了对手)
 	ZR_CheckTeamWinConditions(pVictimPawn->m_iTeamNum() == CS_TEAM_T ? CS_TEAM_CT : CS_TEAM_T);
 
-	// 如果死亡的是僵尸,且在感染后阶段,播放僵尸死亡音效
 	if (pVictimPawn->m_iTeamNum() == CS_TEAM_T && g_ZRRoundState == EZRRoundState::POST_INFECTION)
 		pVictimPawn->EmitSound("zr.amb.zombie_die");
 
-	// 设置定时器重生玩家
+	// respawn player
 	CHandle<CCSPlayerController> handle = pVictimController->GetHandle();
 	new CTimer(g_cvarRespawnDelay.Get() < 0.0f ? 2.0f : g_cvarRespawnDelay.Get(), false, false, [handle]() {
 		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
@@ -1742,75 +1663,61 @@ void ZR_OnPlayerDeath(IGameEvent* pEvent)
 
 void ZR_OnRoundFreezeEnd(IGameEvent* pEvent)
 {
-	// 在训练模式下禁用初始感染流程
-	// ZR_StartInitialCountdown();
-	
-	// 设置回合状态为正常开始,不触发感染流程
-	g_ZRRoundState = EZRRoundState::ROUND_START;
+	ZR_StartInitialCountdown();
 }
 
-// 可能还有更好的方法来检查时间即将结束...
+// there is probably a better way to check when time is running out...
 void ZR_OnRoundTimeWarning(IGameEvent* pEvent)
 {
-	// 当回合时间警告事件触发时执行此函数
-	// 创建一个10秒后执行的计时器,以结束回合
 	new CTimer(10.0, false, false, []() {
 		if (g_ZRRoundState == EZRRoundState::ROUND_END)
 			return -1.0f;
-		// 根据配置的默认获胜队伍结束回合
 		ZR_EndRoundAndAddTeamScore(g_cvarDefaultWinnerTeam.Get());
 		return -1.0f;
 	});
 }
 
-// 检查一个队伍是否有存活的玩家
+// check whether players on a team are all dead
 bool ZR_IsTeamAlive(int iTeamNum)
 {
-	// 遍历所有玩家实体
 	CCSPlayerPawn* pPawn = nullptr;
 	while (nullptr != (pPawn = (CCSPlayerPawn*)UTIL_FindEntityByClassname(pPawn, "player")))
 	{
-		// 跳过已死亡的玩家
 		if (!pPawn->IsAlive())
 			continue;
 
-		// 如果找到指定队伍的存活玩家,返回true
 		if (pPawn->m_iTeamNum() == iTeamNum)
 			return true;
 	}
-	// 没有找到指定队伍的存活玩家,返回false
 	return false;
 }
 
-// 检查一个队伍是否获胜,如果是,结束回合并增加得分
+// check whether a team has won the round, if so, end the round and incre score
 bool ZR_CheckTeamWinConditions(int iTeamNum)
 {
-	// 如果回合已经结束,或者是CT队伍且重生功能已启用,或者是无效队伍,则返回false
 	if (g_ZRRoundState == EZRRoundState::ROUND_END || (iTeamNum == CS_TEAM_CT && g_bRespawnEnabled) || (iTeamNum != CS_TEAM_T && iTeamNum != CS_TEAM_CT))
 		return false;
 
-	// 检查对方队伍是否还有存活玩家
+	// check the opposite team
 	if (ZR_IsTeamAlive(iTeamNum == CS_TEAM_CT ? CS_TEAM_T : CS_TEAM_CT))
 		return false;
 
-	// 允许队伍获胜
+	// allow the team to win
 	ZR_EndRoundAndAddTeamScore(iTeamNum);
 
 	return true;
 }
 
-// 观察者:平局
-// T:T胜利,增加T队分数
-// CT:CT胜利,增加CT队分数
+// spectator: draw
+// t: t win, add t score
+// ct: ct win, add ct score
 void ZR_EndRoundAndAddTeamScore(int iTeamNum)
 {
-	// 检查服务器是否空闲
 	bool bServerIdle = true;
 
 	if (!GetGlobals() || !g_pGameRules)
 		return;
 
-	// 遍历所有客户端,检查是否有真实玩家
 	for (int i = 0; i < GetGlobals()->maxClients; i++)
 	{
 		ZEPlayer* pPlayer = g_playerManager->GetPlayer(i);
@@ -1822,7 +1729,7 @@ void ZR_EndRoundAndAddTeamScore(int iTeamNum)
 		break;
 	}
 
-	// 服务器空闲时不结束回合
+	// Don't end rounds while the server is idling
 	if (bServerIdle)
 		return;
 
