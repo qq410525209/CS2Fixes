@@ -1328,6 +1328,7 @@ void ZR_InfectMotherZombie(CCSPlayerController* pVictimController, std::vector<S
 // the value represents a % chance of the player being skipped next time they are picked to be a mother zombie
 // If the player is skipped, next random player is picked to be mother zombie (and same skip chance logic applies to him)
 // the variable gets decreased by 20 every round
+// ZE测试版: 免疫力系统
 void ZR_InitialInfection()
 {
     // 检查全局变量是否可用
