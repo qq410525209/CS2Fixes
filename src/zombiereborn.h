@@ -28,12 +28,9 @@
 
 using ordered_json = nlohmann::ordered_json;
 
-#define ZR_PREFIX " \4[ZE:训练]\1 "
+#define ZR_PREFIX " \4[Zombie:Reborn]\1 "
 #define HUMAN_CLASS_KEY_NAME "zr_human_class"
 #define ZOMBIE_CLASS_KEY_NAME "zr_zombie_class"
-
-// ConVars前置声明
-extern ConVar g_cvarAlwaysJoinCT; // 控制玩家是否总是加入CT阵营
 
 enum class EZRRoundState
 {
