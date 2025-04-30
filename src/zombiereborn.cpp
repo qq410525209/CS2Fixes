@@ -1411,7 +1411,8 @@ void ZR_InitialInfection()
 				continue;
 			}
 
-			ZR_InfectMotherZombie(pController, spawns);
+			// ZR_InfectMotherZombie(pController, spawns); // 禁用强制母体感染
+			
 			pPlayer->SetImmunity(100);
 			vecIsMZ[pPlayer->GetPlayerSlot().Get()] = true;
 
