@@ -17,29 +17,6 @@
  * this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * =============================================================================
- * Zombie:Reborn (ZR) 模式
- * =============================================================================
- * 这是一个CS2的僵尸模式插件，提供了"人类vs僵尸"的游戏体验。
- * 
- * 主要功能:
- * 1. 玩家分为两队：人类(CT)和僵尸(T)
- * 2. 回合开始时所有玩家都是人类，然后选择"母体僵尸"开始感染
- * 3. 僵尸用刀击中人类时会将人类感染成僵尸
- * 4. 人类可以使用武器击退僵尸，但不能杀死他们
- * 5. 人类和僵尸有不同的类别，拥有不同的属性（如生命值、速度、模型等）
- * 6. 人类需要存活到回合结束，或消灭所有僵尸以获胜
- * 7. 僵尸需要感染所有人类以获胜
- * 
- * 核心机制:
- * - 玩家类别系统：允许玩家选择不同的人类/僵尸类型
- * - 击退系统：武器和爆炸物可以击退僵尸
- * - 感染系统：僵尸通过近战攻击感染人类
- * - 复活系统：支持玩家死亡后复活
- * - 回合管理：处理回合开始/结束条件
- */
-
 #include "usermessages.pb.h"
 
 #include "commands.h"
@@ -76,55 +53,51 @@ extern IGameEventManager2* g_gameEventManager;
 extern IGameEventSystem* g_gameEventSystem;
 extern double g_flUniversalTime;
 
-// 主要功能函数声明
-void ZR_Infect(CCSPlayerController* pAttackerController, CCSPlayerController* pVictimController, bool bBroadcast); // 感染玩家
-bool ZR_CheckTeamWinConditions(int iTeamNum); // 检查团队胜利条件
-void ZR_Cure(CCSPlayerController* pTargetController); // 治愈僵尸(变回人类)
-void ZR_EndRoundAndAddTeamScore(int iTeamNum); // 结束回合并添加队伍得分
-void SetupCTeams(); // 设置团队
-bool ZR_IsTeamAlive(int iTeamNum); // 检查团队是否还有存活玩家
+void ZR_Infect(CCSPlayerController* pAttackerController, CCSPlayerController* pVictimController, bool bBroadcast);
+bool ZR_CheckTeamWinConditions(int iTeamNum);
+void ZR_Cure(CCSPlayerController* pTargetController);
+void ZR_EndRoundAndAddTeamScore(int iTeamNum);
+void SetupCTeams();
+bool ZR_IsTeamAlive(int iTeamNum);
 
-// 全局状态变量
-EZRRoundState g_ZRRoundState = EZRRoundState::ROUND_START; // 当前回合状态
-static int g_iInfectionCountDown = 0; // 感染倒计时
-static bool g_bRespawnEnabled = true; // 是否启用复活
-static CHandle<CBaseEntity> g_hRespawnToggler; // 复活开关实体
-static CHandle<CTeam> g_hTeamCT; // CT队伍实体
-static CHandle<CTeam> g_hTeamT; // T队伍实体
+EZRRoundState g_ZRRoundState = EZRRoundState::ROUND_START;
+static int g_iInfectionCountDown = 0;
+static bool g_bRespawnEnabled = true;
+static CHandle<CBaseEntity> g_hRespawnToggler;
+static CHandle<CTeam> g_hTeamCT;
+static CHandle<CTeam> g_hTeamT;
 
-// 全局管理器
-CZRPlayerClassManager* g_pZRPlayerClassManager = nullptr; // 玩家类别管理器
-ZRWeaponConfig* g_pZRWeaponConfig = nullptr; // 武器配置管理器
-ZRHitgroupConfig* g_pZRHitgroupConfig = nullptr; // 击中部位配置管理器
+CZRPlayerClassManager* g_pZRPlayerClassManager = nullptr;
+ZRWeaponConfig* g_pZRWeaponConfig = nullptr;
+ZRHitgroupConfig* g_pZRHitgroupConfig = nullptr;
 
-// 控制台变量(CVar)设置
-CConVar<bool> g_cvarEnableZR("zr_enable", FCVAR_NONE, "Whether to enable ZR features", false); // 是否启用ZR功能
-CConVar<float> g_cvarMaxZteleDistance("zr_ztele_max_distance", FCVAR_NONE, "Maximum distance players are allowed to move after starting ztele", 150.0f, true, 0.0f, false, 0.0f); // 玩家使用ztele命令后允许移动的最大距离
-CConVar<bool> g_cvarZteleHuman("zr_ztele_allow_humans", FCVAR_NONE, "Whether to allow humans to use ztele", false); // 是否允许人类使用ztele命令
-CConVar<float> g_cvarKnockbackScale("zr_knockback_scale", FCVAR_NONE, "Global knockback scale", 5.0f); // 全局击退系数
-CConVar<int> g_cvarInfectSpawnType("zr_infect_spawn_type", FCVAR_NONE, "Type of Mother Zombies Spawn [0 = MZ spawn where they stand, 1 = MZ get teleported back to spawn on being picked]", (int)EZRSpawnType::RESPAWN, true, 0, true, 1); // 母体僵尸生成类型 [0=原地变身, 1=传送到出生点]
-CConVar<int> g_cvarInfectSpawnTimeMin("zr_infect_spawn_time_min", FCVAR_NONE, "Minimum time in which Mother Zombies should be picked, after round start", 15, true, 0, false, 0); // 回合开始后母体僵尸选择的最小时间
-CConVar<int> g_cvarInfectSpawnTimeMax("zr_infect_spawn_time_max", FCVAR_NONE, "Maximum time in which Mother Zombies should be picked, after round start", 15, true, 1, false, 0); // 回合开始后母体僵尸选择的最大时间
-CConVar<int> g_cvarInfectSpawnMZRatio("zr_infect_spawn_mz_ratio", FCVAR_NONE, "Ratio of all Players to Mother Zombies to be spawned at round start", 7, true, 1, true, 64); // 玩家总数与初始母体僵尸数量的比例
-CConVar<int> g_cvarInfectSpawnMinCount("zr_infect_spawn_mz_min_count", FCVAR_NONE, "Minimum amount of Mother Zombies to be spawned at round start", 1, true, 0, false, 0); // 回合开始时最少的母体僵尸数量
-CConVar<float> g_cvarRespawnDelay("zr_respawn_delay", FCVAR_NONE, "Time before a zombie is automatically respawned, -1 disables this. Note that maps can still manually respawn at any time", 5.0f, true, -1.0f, false, 0.0f); // 僵尸自动复活的延迟时间，-1禁用此功能
-CConVar<int> g_cvarDefaultWinnerTeam("zr_default_winner_team", FCVAR_NONE, "Which team wins when time ran out [1 = Draw, 2 = Zombies, 3 = Humans]", CS_TEAM_SPECTATOR, true, 1, true, 3); // 时间耗尽时哪队获胜 [1=平局, 2=僵尸, 3=人类]
-CConVar<int> g_cvarMZImmunityReduction("zr_mz_immunity_reduction", FCVAR_NONE, "How much mz immunity to reduce for each player per round (0-100)", 20, true, 0, true, 100); // 每回合减少玩家多少母体僵尸免疫度(0-100)
-CConVar<int> g_cvarGroanChance("zr_sounds_groan_chance", FCVAR_NONE, "How likely should a zombie groan whenever they take damage (1 / N)", 5, true, 1, false, 0); // 僵尸受伤时发出呻吟的概率(1/N)
-CConVar<float> g_cvarMoanInterval("zr_sounds_moan_interval", FCVAR_NONE, "How often in seconds should zombies moan", 30.0f, true, 0.0f, false, 0.0f); // 僵尸发出呻吟的间隔秒数
-CConVar<bool> g_cvarNapalmGrenades("zr_napalm_enable", FCVAR_NONE, "Whether to use napalm grenades", true); // 是否启用燃烧弹
-CConVar<float> g_cvarNapalmDuration("zr_napalm_burn_duration", FCVAR_NONE, "How long in seconds should zombies burn from napalm grenades", 5.0f, true, 0.0f, false, 0.0f); // 僵尸被燃烧弹点燃的持续时间
-CConVar<float> g_cvarNapalmFullDamage("zr_napalm_full_damage", FCVAR_NONE, "The amount of damage needed to apply full burn duration for napalm grenades (max grenade damage is 99)", 50.0f, true, 0.0f, true, 99.0f); // 造成满燃烧持续时间所需的伤害值(手雷最大伤害为99)
-CConVar<CUtlString> g_cvarHumanWinOverlayParticle("zr_human_win_overlay_particle", FCVAR_NONE, "Screenspace particle to display when human win", ""); // 人类获胜时显示的屏幕粒子效果
-CConVar<CUtlString> g_cvarHumanWinOverlayMaterial("zr_human_win_overlay_material", FCVAR_NONE, "Material override for human's win overlay particle", ""); // 人类获胜屏幕粒子的材质覆盖
-CConVar<float> g_cvarHumanWinOverlaySize("zr_human_win_overlay_size", FCVAR_NONE, "Size of human's win overlay particle", 100.0f, true, 0.0f, true, 100.0f); // 人类获胜屏幕粒子的大小
-CConVar<CUtlString> g_cvarZombieWinOverlayParticle("zr_zombie_win_overlay_particle", FCVAR_NONE, "Screenspace particle to display when zombie win", ""); // 僵尸获胜时显示的屏幕粒子效果
-CConVar<CUtlString> g_cvarZombieWinOverlayMaterial("zr_zombie_win_overlay_material", FCVAR_NONE, "Material override for zombie's win overlay particle", ""); // 僵尸获胜屏幕粒子的材质覆盖
-CConVar<float> g_cvarZombieWinOverlaySize("zr_zombie_win_overlay_size", FCVAR_NONE, "Size of zombie's win overlay particle", 100.0f, true, 0.0f, true, 100.0f); // 僵尸获胜屏幕粒子的大小
-CConVar<bool> g_cvarInfectShake("zr_infect_shake", FCVAR_NONE, "Whether to shake a player's view on infect", true); // 玩家被感染时是否震动屏幕
-CConVar<float> g_cvarInfectShakeAmplitude("zr_infect_shake_amp", FCVAR_NONE, "Amplitude of shaking effect", 15.0f, true, 0.0f, true, 16.0f); // 感染震动效果的幅度
-CConVar<float> g_cvarInfectShakeFrequency("zr_infect_shake_frequency", FCVAR_NONE, "Frequency of shaking effect", 2.0f, true, 0.0f, false, 0.0f); // 感染震动效果的频率
-CConVar<float> g_cvarInfectShakeDuration("zr_infect_shake_duration", FCVAR_NONE, "Duration of shaking effect", 5.0f, true, 0.0f, false, 0.0f); // 感染震动效果的持续时间
+CConVar<bool> g_cvarEnableZR("zr_enable", FCVAR_NONE, "Whether to enable ZR features", false);
+CConVar<float> g_cvarMaxZteleDistance("zr_ztele_max_distance", FCVAR_NONE, "Maximum distance players are allowed to move after starting ztele", 150.0f, true, 0.0f, false, 0.0f);
+CConVar<bool> g_cvarZteleHuman("zr_ztele_allow_humans", FCVAR_NONE, "Whether to allow humans to use ztele", false);
+CConVar<float> g_cvarKnockbackScale("zr_knockback_scale", FCVAR_NONE, "Global knockback scale", 5.0f);
+CConVar<int> g_cvarInfectSpawnType("zr_infect_spawn_type", FCVAR_NONE, "Type of Mother Zombies Spawn [0 = MZ spawn where they stand, 1 = MZ get teleported back to spawn on being picked]", (int)EZRSpawnType::RESPAWN, true, 0, true, 1);
+CConVar<int> g_cvarInfectSpawnTimeMin("zr_infect_spawn_time_min", FCVAR_NONE, "Minimum time in which Mother Zombies should be picked, after round start", 15, true, 0, false, 0);
+CConVar<int> g_cvarInfectSpawnTimeMax("zr_infect_spawn_time_max", FCVAR_NONE, "Maximum time in which Mother Zombies should be picked, after round start", 15, true, 1, false, 0);
+CConVar<int> g_cvarInfectSpawnMZRatio("zr_infect_spawn_mz_ratio", FCVAR_NONE, "Ratio of all Players to Mother Zombies to be spawned at round start", 7, true, 1, true, 64);
+CConVar<int> g_cvarInfectSpawnMinCount("zr_infect_spawn_mz_min_count", FCVAR_NONE, "Minimum amount of Mother Zombies to be spawned at round start", 1, true, 0, false, 0);
+CConVar<float> g_cvarRespawnDelay("zr_respawn_delay", FCVAR_NONE, "Time before a zombie is automatically respawned, -1 disables this. Note that maps can still manually respawn at any time", 5.0f, true, -1.0f, false, 0.0f);
+CConVar<int> g_cvarDefaultWinnerTeam("zr_default_winner_team", FCVAR_NONE, "Which team wins when time ran out [1 = Draw, 2 = Zombies, 3 = Humans]", CS_TEAM_SPECTATOR, true, 1, true, 3);
+CConVar<int> g_cvarMZImmunityReduction("zr_mz_immunity_reduction", FCVAR_NONE, "How much mz immunity to reduce for each player per round (0-100)", 20, true, 0, true, 100);
+CConVar<int> g_cvarGroanChance("zr_sounds_groan_chance", FCVAR_NONE, "How likely should a zombie groan whenever they take damage (1 / N)", 5, true, 1, false, 0);
+CConVar<float> g_cvarMoanInterval("zr_sounds_moan_interval", FCVAR_NONE, "How often in seconds should zombies moan", 30.0f, true, 0.0f, false, 0.0f);
+CConVar<bool> g_cvarNapalmGrenades("zr_napalm_enable", FCVAR_NONE, "Whether to use napalm grenades", true);
+CConVar<float> g_cvarNapalmDuration("zr_napalm_burn_duration", FCVAR_NONE, "How long in seconds should zombies burn from napalm grenades", 5.0f, true, 0.0f, false, 0.0f);
+CConVar<float> g_cvarNapalmFullDamage("zr_napalm_full_damage", FCVAR_NONE, "The amount of damage needed to apply full burn duration for napalm grenades (max grenade damage is 99)", 50.0f, true, 0.0f, true, 99.0f);
+CConVar<CUtlString> g_cvarHumanWinOverlayParticle("zr_human_win_overlay_particle", FCVAR_NONE, "Screenspace particle to display when human win", "");
+CConVar<CUtlString> g_cvarHumanWinOverlayMaterial("zr_human_win_overlay_material", FCVAR_NONE, "Material override for human's win overlay particle", "");
+CConVar<float> g_cvarHumanWinOverlaySize("zr_human_win_overlay_size", FCVAR_NONE, "Size of human's win overlay particle", 100.0f, true, 0.0f, true, 100.0f);
+CConVar<CUtlString> g_cvarZombieWinOverlayParticle("zr_zombie_win_overlay_particle", FCVAR_NONE, "Screenspace particle to display when zombie win", "");
+CConVar<CUtlString> g_cvarZombieWinOverlayMaterial("zr_zombie_win_overlay_material", FCVAR_NONE, "Material override for zombie's win overlay particle", "");
+CConVar<float> g_cvarZombieWinOverlaySize("zr_zombie_win_overlay_size", FCVAR_NONE, "Size of zombie's win overlay particle", 100.0f, true, 0.0f, true, 100.0f);
+CConVar<bool> g_cvarInfectShake("zr_infect_shake", FCVAR_NONE, "Whether to shake a player's view on infect", true);
+CConVar<float> g_cvarInfectShakeAmplitude("zr_infect_shake_amp", FCVAR_NONE, "Amplitude of shaking effect", 15.0f, true, 0.0f, true, 16.0f);
+CConVar<float> g_cvarInfectShakeFrequency("zr_infect_shake_frequency", FCVAR_NONE, "Frequency of shaking effect", 2.0f, true, 0.0f, false, 0.0f);
+CConVar<float> g_cvarInfectShakeDuration("zr_infect_shake_duration", FCVAR_NONE, "Duration of shaking effect", 5.0f, true, 0.0f, false, 0.0f);
 
 // meant only for offline config validation and can easily cause issues when used on live server
 #ifdef _DEBUG
@@ -988,23 +961,14 @@ void ToggleRespawn(bool force = false, bool value = false)
 	}
 }
 
-/**
- * 回合预开始事件处理函数
- * 处理回合重置相关的初始化
- * 
- * @param pEvent 游戏事件
- */
 void ZR_OnRoundPrestart(IGameEvent* pEvent)
 {
-	// 设置回合状态为开始
 	g_ZRRoundState = EZRRoundState::ROUND_START;
-	// 启用玩家复活
 	ToggleRespawn(true, true);
 
 	if (!GetGlobals())
 		return;
 
-	// 处理所有玩家
 	for (int i = 0; i < GetGlobals()->maxClients; i++)
 	{
 		CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
@@ -1012,24 +976,20 @@ void ZR_OnRoundPrestart(IGameEvent* pEvent)
 		if (!pController || pController->m_bIsHLTV)
 			continue;
 
-		// 如果玩家是T队(僵尸)，则切换到CT队(人类)
+		// Only do this for Ts, ignore CTs and specs
 		if (pController->m_iTeamNum() == CS_TEAM_T)
 			pController->SwitchTeam(CS_TEAM_CT);
 
 		CCSPlayerPawn* pPawn = pController->GetPlayerPawn();
 
-		// 禁用回合重置过程中的伤害
-		// 防止在回合重置期间(CCSGameRules::RestartRound内)发生的伤害
-		// 如果此时所有人都是僵尸，会导致所有人死亡并触发另一次回合重置，破坏游戏流程
+		// Prevent damage that occurs between now and when the round restart is finished
+		// Somehow CT filtered nukes can apply damage during the round restart (all within CCSGameRules::RestartRound)
+		// And if everyone was a zombie at this moment, they will all die and trigger ANOTHER round restart which breaks everything
 		if (pPawn)
 			pPawn->m_bTakesDamage = false;
 	}
 }
 
-/**
- * 设置复活开关实体
- * 创建一个名为"zr_toggle_respawn"的逻辑中继器实体
- */
 void SetupRespawnToggler()
 {
 	CBaseEntity* relay = CreateEntityByName("logic_relay");
@@ -1040,10 +1000,6 @@ void SetupRespawnToggler()
 	g_hRespawnToggler = relay->GetHandle();
 }
 
-/**
- * 设置CT和T队伍实体引用
- * 查找并存储队伍管理器实体的引用
- */
 void SetupCTeams()
 {
 	CTeam* pTeam = nullptr;
@@ -1054,26 +1010,15 @@ void SetupCTeams()
 			g_hTeamT = pTeam->GetHandle();
 }
 
-/**
- * 回合开始事件处理函数
- * 回合正式开始后的处理
- * 
- * @param pEvent 游戏事件
- */
 void ZR_OnRoundStart(IGameEvent* pEvent)
 {
-	// 发送游戏模式介绍消息给所有玩家
 	ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "The game is \x05Humans vs. Zombies\x01, the goal for zombies is to infect all humans by knifing them.");
-	
-	// 设置复活开关实体和队伍实体
 	SetupRespawnToggler();
-	// 清除所有僵尸的生命恢复计时器
 	CZRRegenTimer::RemoveAllTimers();
 
 	if (!GetGlobals())
 		return;
 
-	// 恢复所有玩家的伤害状态
 	for (int i = 0; i < GetGlobals()->maxClients; i++)
 	{
 		CCSPlayerController* pController = CCSPlayerController::FromSlot(i);
@@ -1083,25 +1028,19 @@ void ZR_OnRoundStart(IGameEvent* pEvent)
 
 		CCSPlayerPawn* pPawn = pController->GetPlayerPawn();
 
-		// 回合正式开始，启用玩家伤害
+		// Now we can enable damage back
 		if (pPawn)
 			pPawn->m_bTakesDamage = true;
 	}
 }
 
-/**
- * 玩家出生事件处理函数
- * 处理玩家出生时的队伍分配和感染状态
- * 
- * @param pController 玩家控制器
- */
 void ZR_OnPlayerSpawn(CCSPlayerController* pController)
 {
-	// 延迟感染处理
+	// delay infection a bit
 	bool bInfect = g_ZRRoundState == EZRRoundState::POST_INFECTION;
 
-	// 如果当前回合状态是感染后状态，玩家将立即被感染
-	// 在感染处理完成之前禁用伤害，并立即设置为僵尸队
+	// We're infecting this guy with a delay, disable all damage as they have 100 hp until then
+	// also set team immediately in case the spawn teleport is team filtered
 	if (bInfect)
 	{
 		pController->GetPawn()->m_bTakesDamage(false);
@@ -1109,18 +1048,14 @@ void ZR_OnPlayerSpawn(CCSPlayerController* pController)
 	}
 	else
 	{
-		// 否则设置为人类队
 		pController->SwitchTeam(CS_TEAM_CT);
 	}
 
-	// 创建延时处理出生后的感染或治愈
 	CHandle<CCSPlayerController> handle = pController->GetHandle();
 	new CTimer(0.05f, false, false, [handle, bInfect]() {
 		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
 		if (!pController)
 			return -1.0f;
-		
-		// 根据回合状态决定是感染还是治愈玩家
 		if (bInfect)
 			ZR_Infect(pController, pController, true);
 		else
@@ -1129,125 +1064,41 @@ void ZR_OnPlayerSpawn(CCSPlayerController* pController)
 	});
 }
 
-/**
- * 移除玩家的所有武器，并根据队伍给予相应的刀
- * T队给刀，CT队给刀和护甲
- * 
- * @param pPawn 玩家实体
- */
-void ZR_StripAndGiveKnife(CCSPlayerPawn* pPawn)
-{
-	CCSPlayer_ItemServices* pItemServices = pPawn->m_pItemServices();
-	CCSPlayer_WeaponServices* pWeaponServices = pPawn->m_pWeaponServices();
-
-	// 防止空指针(玩家在第一回合加入时可能为空)
-	if (!pItemServices || !pWeaponServices)
-		return;
-
-	// 丢弃地图武器并移除所有武器
-	pPawn->DropMapWeapons();
-	pItemServices->StripPlayerWeapons(true);
-
-	// 根据队伍给予不同的刀
-	if (pPawn->m_iTeamNum == CS_TEAM_T)
-	{
-		// 给T队玩家(僵尸)发T刀
-		pItemServices->GiveNamedItem("weapon_knife_t");
-	}
-	else if (pPawn->m_iTeamNum == CS_TEAM_CT)
-	{
-		// 给CT队玩家(人类)发CT刀
-		pItemServices->GiveNamedItem("weapon_knife");
-
-		// 如果允许免费护甲，则给予护甲
-		ConVarRefAbstract mp_free_armor("mp_free_armor");
-		if (mp_free_armor.GetBool())
-			pItemServices->GiveNamedItem("item_kevlar");
-	}
-
-	// 获取玩家的武器列表
-	CUtlVector<CHandle<CBasePlayerWeapon>>* weapons = pWeaponServices->m_hMyWeapons();
-
-	// 找到并自动选择刀
-	FOR_EACH_VEC(*weapons, i)
-	{
-		CBasePlayerWeapon* pWeapon = (*weapons)[i].Get();
-
-		if (pWeapon && pWeapon->GetWeaponVData()->m_GearSlot() == GEAR_SLOT_KNIFE)
-		{
-			// 通常不需要，但是在扔手雷后立即被感染时需要手动切换
-			pWeaponServices->SelectItem(pWeapon);
-			break;
-		}
-	}
-}
-
-/**
- * 对僵尸应用击退效果(人类武器攻击僵尸时)
- * 
- * @param pHuman 人类玩家实体
- * @param pVictim 僵尸玩家实体
- * @param iDamage 造成的伤害值
- * @param szWeapon 武器名称
- * @param hitgroup 击中的部位
- * @param classknockback 僵尸类别的击退系数
- */
 void ZR_ApplyKnockback(CCSPlayerPawn* pHuman, CCSPlayerPawn* pVictim, int iDamage, const char* szWeapon, int hitgroup, float classknockback)
 {
-	// 获取武器的击退系数配置
 	std::shared_ptr<ZRWeapon> pWeapon = g_pZRWeaponConfig->FindWeapon(szWeapon);
 	std::shared_ptr<ZRHitgroup> pHitgroup = g_pZRHitgroupConfig->FindHitgroupIndex(hitgroup);
-	// 如果武器配置不存在，则不进行击退(玩家不应该能捡起无效武器)
+	// player shouldn't be able to pick up that weapon in the first place, but just in case
 	if (!pWeapon)
 		return;
-	
 	float flWeaponKnockbackScale = pWeapon->flKnockback;
 	float flHitgroupKnockbackScale = 1.0f;
 
-	// 如果击中部位配置存在，则应用该部位的击退系数
 	if (pHitgroup)
 		flHitgroupKnockbackScale = pHitgroup->flKnockback;
 
-	// 计算击退方向和力度
 	Vector vecKnockback;
 	AngleVectors(pHuman->m_angEyeAngles(), &vecKnockback);
-	// 根据伤害值、全局击退系数、武器击退系数、击中部位系数和僵尸类别系数计算最终击退力
 	vecKnockback *= (iDamage * g_cvarKnockbackScale.Get() * flWeaponKnockbackScale * flHitgroupKnockbackScale * classknockback);
-	
-	// 应用击退到僵尸的速度上
 	pVictim->m_vecAbsVelocity = pVictim->m_vecAbsVelocity() + vecKnockback;
 }
 
-/**
- * 对僵尸应用爆炸物击退效果(手雷或燃烧瓶)
- * 
- * @param pProjectile 爆炸物实体
- * @param pVictim 僵尸玩家实体
- * @param iDamage 造成的伤害值
- * @param bMolotov 是否为燃烧瓶
- */
 void ZR_ApplyKnockbackExplosion(CBaseEntity* pProjectile, CCSPlayerPawn* pVictim, int iDamage, bool bMolotov)
 {
-	// 获取爆炸物的击退系数配置
 	std::shared_ptr<ZRWeapon> pWeapon = g_pZRWeaponConfig->FindWeapon(pProjectile->GetClassname());
 	if (!pWeapon)
 		return;
 	float flWeaponKnockbackScale = pWeapon->flKnockback;
 
-	// 计算玩家与爆炸点的方向向量
 	Vector vecDisplacement = pVictim->GetAbsOrigin() - pProjectile->GetAbsOrigin();
-	vecDisplacement.z += 36; // 增加垂直高度，使击退更加明显
+	vecDisplacement.z += 36;
 	VectorNormalize(vecDisplacement);
 	Vector vecKnockback = vecDisplacement;
 
-	// 燃烧瓶只有水平方向的击退，没有垂直方向
 	if (bMolotov)
 		vecKnockback.z = 0;
 
-	// 根据伤害值、全局击退系数和武器击退系数计算最终击退力
 	vecKnockback *= (iDamage * g_cvarKnockbackScale.Get() * flWeaponKnockbackScale);
-	
-	// 应用击退到僵尸的速度上
 	pVictim->m_vecAbsVelocity = pVictim->m_vecAbsVelocity() + vecKnockback;
 }
 
@@ -1271,20 +1122,53 @@ void ZR_FakePlayerDeath(CCSPlayerController* pAttackerController, CCSPlayerContr
 	g_gameEventManager->FireEvent(pEvent, bDontBroadcast);
 }
 
-/**
- * 治愈僵尸，将玩家从僵尸变回人类
- * 
- * @param pTargetController 目标玩家控制器
- */
+void ZR_StripAndGiveKnife(CCSPlayerPawn* pPawn)
+{
+	CCSPlayer_ItemServices* pItemServices = pPawn->m_pItemServices();
+	CCSPlayer_WeaponServices* pWeaponServices = pPawn->m_pWeaponServices();
+
+	// it can sometimes be null when player joined on the very first round?
+	if (!pItemServices || !pWeaponServices)
+		return;
+
+	pPawn->DropMapWeapons();
+	pItemServices->StripPlayerWeapons(true);
+
+	if (pPawn->m_iTeamNum == CS_TEAM_T)
+	{
+		pItemServices->GiveNamedItem("weapon_knife_t");
+	}
+	else if (pPawn->m_iTeamNum == CS_TEAM_CT)
+	{
+		pItemServices->GiveNamedItem("weapon_knife");
+
+		ConVarRefAbstract mp_free_armor("mp_free_armor");
+		if (mp_free_armor.GetBool())
+			pItemServices->GiveNamedItem("item_kevlar");
+	}
+
+	CUtlVector<CHandle<CBasePlayerWeapon>>* weapons = pWeaponServices->m_hMyWeapons();
+
+	FOR_EACH_VEC(*weapons, i)
+	{
+		CBasePlayerWeapon* pWeapon = (*weapons)[i].Get();
+
+		if (pWeapon && pWeapon->GetWeaponVData()->m_GearSlot() == GEAR_SLOT_KNIFE)
+		{
+			// Normally this isn't necessary, but there's a small window if infected right after throwing a grenade where this is needed
+			pWeaponServices->SelectItem(pWeapon);
+			break;
+		}
+	}
+}
+
 void ZR_Cure(CCSPlayerController* pTargetController)
 {
-	// 如果玩家是T队(僵尸)，则切换到CT队(人类)
 	if (pTargetController->m_iTeamNum() == CS_TEAM_T)
 		pTargetController->SwitchTeam(CS_TEAM_CT);
 
 	ZEPlayer* pZEPlayer = pTargetController->GetZEPlayer();
 
-	// 更新玩家的感染状态
 	if (pZEPlayer)
 		pZEPlayer->SetInfectState(false);
 
@@ -1292,16 +1176,9 @@ void ZR_Cure(CCSPlayerController* pTargetController)
 	if (!pTargetPawn)
 		return;
 
-	// 应用人类类别属性(根据玩家偏好或默认类别)
 	g_pZRPlayerClassManager->ApplyPreferredOrDefaultHumanClass(pTargetPawn);
 }
 
-/**
- * 发出僵尸呻吟声的计时器回调
- * 
- * @param hPlayer 玩家句柄
- * @return 下次呻吟的延迟秒数，-1表示停止计时器
- */
 float ZR_MoanTimer(ZEPlayerHandle hPlayer)
 {
 	if (!hPlayer.IsValid())
@@ -1315,50 +1192,35 @@ float ZR_MoanTimer(ZEPlayerHandle hPlayer)
 	if (!pPawn || pPawn->m_iTeamNum == CS_TEAM_CT)
 		return -1.f;
 
-	// 僵尸死亡时不播放声音
+	// This guy is dead but still infected, and corpses are quiet
 	if (!pPawn->IsAlive())
 		return g_cvarMoanInterval.Get() + (rand() % 5);
 
-	// 播放僵尸呻吟声音
 	pPawn->EmitSound("zr.amb.zombie_voice_idle");
 
-	// 返回下次呻吟的间隔时间(随机偏移)
 	return g_cvarMoanInterval.Get() + (rand() % 5);
 }
 
-/**
- * 为被感染的玩家添加视角震动效果
- * 
- * @param pController 玩家控制器
- */
 void ZR_InfectShake(CCSPlayerController* pController)
 {
 	if (!pController || !pController->IsConnected() || pController->IsBot() || !g_cvarInfectShake.Get())
 		return;
 
-	// 创建震动网络消息
 	INetworkMessageInternal* pNetMsg = g_pNetworkMessages->FindNetworkMessagePartial("Shake");
 
 	auto data = pNetMsg->AllocateMessage()->ToPB<CUserMessageShake>();
 
-	// 设置震动参数
 	data->set_duration(g_cvarInfectShakeDuration.Get());
 	data->set_frequency(g_cvarInfectShakeFrequency.Get());
 	data->set_amplitude(g_cvarInfectShakeAmplitude.Get());
 	data->set_command(0);
 
-	// 发送给指定玩家
 	CSingleRecipientFilter filter(pController->GetPlayerSlot());
 	g_gameEventSystem->PostEventAbstract(-1, false, &filter, pNetMsg, data, 0);
 
 	delete data;
 }
 
-/**
- * 获取地图中所有出生点
- * 
- * @return 出生点列表
- */
 std::vector<SpawnPoint*> ZR_GetSpawns()
 {
 	std::vector<SpawnPoint*> spawns;
@@ -1366,15 +1228,12 @@ std::vector<SpawnPoint*> ZR_GetSpawns()
 	if (!g_pGameRules)
 		return spawns;
 
-	// 获取CT和T的出生点
 	CUtlVector<SpawnPoint*>* ctSpawns = g_pGameRules->m_CTSpawnPoints();
 	CUtlVector<SpawnPoint*>* tSpawns = g_pGameRules->m_TerroristSpawnPoints();
 
-	// 添加CT出生点
 	FOR_EACH_VEC(*ctSpawns, i)
 	spawns.push_back((*ctSpawns)[i]);
 
-	// 添加T出生点
 	FOR_EACH_VEC(*tSpawns, i)
 	spawns.push_back((*tSpawns)[i]);
 
@@ -1384,127 +1243,96 @@ std::vector<SpawnPoint*> ZR_GetSpawns()
 	return spawns;
 }
 
-/**
- * 将玩家感染为僵尸
- * 
- * @param pAttackerController 攻击者控制器
- * @param pVictimController 被害者控制器
- * @param bDontBroadcast 是否不广播死亡事件
- */
 void ZR_Infect(CCSPlayerController* pAttackerController, CCSPlayerController* pVictimController, bool bDontBroadcast)
 {
-	// 防止无效的玩家控制器
+	// This can be null if the victim disconnected right before getting hit AND someone joined in their place immediately, thus replacing the controller
 	if (!pVictimController)
 		return;
 
-	// 如果玩家是CT队(人类)，则切换到T队(僵尸)
 	if (pVictimController->m_iTeamNum() == CS_TEAM_CT)
 		pVictimController->SwitchTeam(CS_TEAM_T);
 
-	// 检查僵尸队胜利条件(是否所有人类都已感染)
 	ZR_CheckTeamWinConditions(CS_TEAM_T);
 
-	// 发送假死亡事件(用于统计和显示击杀图标)
-	ZR_FakePlayerDeath(pAttackerController, pVictimController, "knife", bDontBroadcast);
+	ZR_FakePlayerDeath(pAttackerController, pVictimController, "knife", bDontBroadcast); // or any other killicon
 
 	CCSPlayerPawn* pVictimPawn = (CCSPlayerPawn*)pVictimController->GetPawn();
 	if (!pVictimPawn)
 		return;
 
-	// 恢复被延迟感染期间禁用的伤害
+	// We disabled damage due to the delayed infection, restore
 	pVictimPawn->m_bTakesDamage(true);
 
-	// 播放僵尸尖叫声
 	pVictimPawn->EmitSound("zr.amb.scream");
 
-	// 移除所有武器并给予僵尸刀
 	ZR_StripAndGiveKnife(pVictimPawn);
 
-	// 应用僵尸类别属性
 	g_pZRPlayerClassManager->ApplyPreferredOrDefaultZombieClass(pVictimPawn);
 
-	// 应用感染震动效果
 	ZR_InfectShake(pVictimController);
 
 	ZEPlayer* pZEPlayer = pVictimController->GetZEPlayer();
 
 	if (pZEPlayer && !pZEPlayer->IsInfected())
 	{
-		// 设置玩家的感染状态
 		pZEPlayer->SetInfectState(true);
 
-		// 开始定时发出僵尸呻吟
 		ZEPlayerHandle hPlayer = pZEPlayer->GetHandle();
 		new CTimer(g_cvarMoanInterval.Get() + (rand() % 5), false, false, [hPlayer]() { return ZR_MoanTimer(hPlayer); });
 	}
 }
 
-/**
- * 将玩家感染为母体僵尸(初始僵尸)
- * 
- * @param pVictimController 目标玩家控制器
- * @param spawns 出生点列表，用于传送功能
- */
 void ZR_InfectMotherZombie(CCSPlayerController* pVictimController, std::vector<SpawnPoint*> spawns)
 {
 	CCSPlayerPawn* pVictimPawn = (CCSPlayerPawn*)pVictimController->GetPawn();
 	if (!pVictimPawn)
 		return;
 
-	// 切换到僵尸队伍
 	pVictimController->SwitchTeam(CS_TEAM_T);
 
-	// 创建一个假的死亡事件(不发送给客户端)
-	ZR_FakePlayerDeath(pVictimController, pVictimController, "knife", true);
+	ZR_FakePlayerDeath(pVictimController, pVictimController, "knife", true); // not sent to clients
 
-	// 移除所有武器并给予僵尸刀
 	ZR_StripAndGiveKnife(pVictimPawn);
 
-	// 根据设置选择是原地变身还是传送到出生点
+	// pick random spawn point
 	if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN)
 	{
-		// 随机选择一个出生点
 		int randomindex = rand() % spawns.size();
 		Vector origin = spawns[randomindex]->GetAbsOrigin();
 		QAngle rotation = spawns[randomindex]->GetAbsRotation();
 
-		// 传送玩家到出生点
 		pVictimPawn->Teleport(&origin, &rotation, &vec3_origin);
 	}
 
-	// 播放僵尸尖叫声
 	pVictimPawn->EmitSound("zr.amb.scream");
 
-	// 尝试应用特殊的"母体僵尸"类别，如果不存在则使用默认僵尸类别
 	std::shared_ptr<ZRZombieClass> pClass = g_pZRPlayerClassManager->GetZombieClass("MotherZombie");
 	if (pClass)
 		g_pZRPlayerClassManager->ApplyZombieClass(pClass, pVictimPawn);
 	else
 		g_pZRPlayerClassManager->ApplyPreferredOrDefaultZombieClass(pVictimPawn);
 
-	// 应用感染震动效果
 	ZR_InfectShake(pVictimController);
 
 	ZEPlayer* pZEPlayer = pVictimController->GetZEPlayer();
 
-	// 设置感染状态
 	pZEPlayer->SetInfectState(true);
 
-	// 开始定时发出僵尸呻吟
 	ZEPlayerHandle hPlayer = pZEPlayer->GetHandle();
 	new CTimer(g_cvarMoanInterval.Get() + (rand() % 5), false, false, [hPlayer]() { return ZR_MoanTimer(hPlayer); });
 }
 
-/**
- * 初始感染 - 选择并感染第一批母体僵尸
- * 使用免疫系统减少同一玩家频繁被选为母体僵尸的机会
- */
+// make players who've been picked as MZ recently less likely to be picked again
+// store a variable in ZEPlayer, which gets initialized with value 100 if they are picked to be a mother zombie
+// the value represents a % chance of the player being skipped next time they are picked to be a mother zombie
+// If the player is skipped, next random player is picked to be mother zombie (and same skip chance logic applies to him)
+// the variable gets decreased by 20 every round
 void ZR_InitialInfection()
 {
 	if (!GetGlobals())
 		return;
 
-	// 收集可作为母体僵尸的候选人
+	// mz infection candidates
 	CUtlVector<CCSPlayerController*> pCandidateControllers;
 	for (int i = 0; i < GetGlobals()->maxClients; i++)
 	{
@@ -1525,12 +1353,12 @@ void ZR_InitialInfection()
 		return;
 	}
 
-	// 计算需要感染的母体僵尸数量
+	// the num of mz to infect
 	int iMZToInfect = pCandidateControllers.Count() / g_cvarInfectSpawnMZRatio.Get();
 	iMZToInfect = g_cvarInfectSpawnMinCount.Get() > iMZToInfect ? g_cvarInfectSpawnMinCount.Get() : iMZToInfect;
 	bool vecIsMZ[MAXPLAYERS] = {false};
 
-	// 获取出生点列表
+	// get spawn points
 	std::vector<SpawnPoint*> spawns = ZR_GetSpawns();
 	if (g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::RESPAWN && !spawns.size())
 	{
@@ -1640,140 +1468,49 @@ void ZR_StartInitialCountdown()
 	});
 }
 
-/**
- * 玩家受伤时的钩子函数
- * 处理僵尸和人类之间的伤害行为和击退效果
- * 
- * @param pInfo 伤害信息
- * @param pVictimPawn 被攻击的玩家实体
- * @return 是否继续处理伤害(true=继续, false=阻止)
- */
 bool ZR_Hook_OnTakeDamage_Alive(CTakeDamageInfo* pInfo, CCSPlayerPawn* pVictimPawn)
 {
-	// 无效的伤害信息或受害者，允许伤害继续处理
-	if (!pInfo || !pVictimPawn)
-		return true;
+	CCSPlayerPawn* pAttackerPawn = (CCSPlayerPawn*)pInfo->m_hAttacker.Get();
 
-	// 检查受害者是否存活
-	if (/*!pVictimPawn || */ !pVictimPawn->IsAlive() || !g_cvarEnableZR.Get())
-		return true;
-
-	// 检查受害者的队伍
-	if (pVictimPawn->m_iTeamNum != CS_TEAM_CT && pVictimPawn->m_iTeamNum != CS_TEAM_T)
-		return true;
-
-	// 获取攻击者实体
-	CBaseEntity* pAttacker = pInfo->m_hAttacker.Get();
-	if (!pAttacker)
-		return true;
-
-	// 处理爆炸物对僵尸的击退效果
-	if (V_strstr(pAttacker->GetClassname(), "projectile"))
-	{
-		// 仅对僵尸应用击退
-		if (pVictimPawn->m_iTeamNum == CS_TEAM_T)
-		{
-			// 特殊处理火焰伤害
-			bool isMolotov = V_strstr(pAttacker->GetClassname(), "molotov") != nullptr;
-			if (isMolotov)
-			{
-				// 如果启用了燃烧弹功能
-				if (g_cvarNapalmGrenades.Get())
-				{
-					// 计算燃烧持续时间(基于伤害值)
-					float flDuration = g_cvarNapalmDuration.Get() * (pInfo->m_flDamage / g_cvarNapalmFullDamage.Get());
-					flDuration = clamp(flDuration, 0.0f, g_cvarNapalmDuration.Get());
-					// 设置燃烧时间
-					if (flDuration > 0.0f)
-						pVictimPawn->m_flFlameCreateTime = GetGlobals()->curtime + flDuration;
-				}
-			}
-
-			// 应用爆炸物击退效果
-			ZR_ApplyKnockbackExplosion(pAttacker, pVictimPawn, pInfo->m_flDamage, isMolotov);
-		}
-		// 允许爆炸物对所有玩家造成伤害
-		return true;
-	}
-	
-	// 获取攻击者的玩家实体
-	CCSPlayerPawn* pAttackerPawn = ToCSPlayerPawn(pAttacker);
-	if (!pAttackerPawn)
-		return true;
-
-	// 仅处理人类->僵尸或僵尸->人类的伤害，同队攻击允许直接通过
-	if (pAttackerPawn->m_iTeamNum == pVictimPawn->m_iTeamNum)
-		return true;
-
-	// 获取武器信息
-	const char* szWeapon = pInfo->m_hInflictor ? pInfo->m_hInflictor->GetClassname() : NULL;
-	// 如果无法获取武器名称，尝试从攻击者获取
-	if (!szWeapon)
-		szWeapon = pAttackerPawn->GetClassname();
-
-	// 获取攻击者的控制器
-	CCSPlayerController* pAttackerController = (CCSPlayerController*)pAttackerPawn->GetController();
-	// 获取受害者的控制器
-	CCSPlayerController* pVictimController = (CCSPlayerController*)pVictimPawn->GetController();
-
-	// 检查是否为爆炸性武器
-	bool isGrenade = szWeapon && V_strstr(szWeapon, "projectile");
-
-	// 处理僵尸攻击人类的情况
-	if (pAttackerPawn->m_iTeamNum == CS_TEAM_T && pVictimPawn->m_iTeamNum == CS_TEAM_CT)
-	{
-		// 仅处理刀的伤害(僵尸只能用刀感染)
-		if (szWeapon && V_strstr(szWeapon, "knife"))
-		{
-			// 将人类感染为僵尸
-			ZR_Infect(pAttackerController, pVictimController, false);
-			
-			// 生成受伤音效
-			pVictimPawn->EmitSound("player/damage1.wav");
-			
-			// 阻止实际伤害处理
-			return false;
-		}
-
-		// 非刀攻击不进行伤害处理
+	if (!(pAttackerPawn && pVictimPawn && pAttackerPawn->IsPawn() && pVictimPawn->IsPawn()))
 		return false;
-	}
-	// 处理人类攻击僵尸的情况
-	else if (pAttackerPawn->m_iTeamNum == CS_TEAM_CT && pVictimPawn->m_iTeamNum == CS_TEAM_T)
+
+	CCSPlayerController* pAttackerController = CCSPlayerController::FromPawn(pAttackerPawn);
+	CCSPlayerController* pVictimController = CCSPlayerController::FromPawn(pVictimPawn);
+	const char* pszAbilityClass = pInfo->m_hAbility.Get() ? pInfo->m_hAbility.Get()->GetClassname() : "";
+	if (pAttackerPawn->m_iTeamNum() == CS_TEAM_T && pVictimPawn->m_iTeamNum() == CS_TEAM_CT && !V_strncmp(pszAbilityClass, "weapon_knife", 12))
 	{
-		// 如果是刀攻击，不造成伤害
-		if (szWeapon && V_strstr(szWeapon, "knife"))
-			return false;
+		ZR_Infect(pAttackerController, pVictimController, false);
+		return true; // nullify the damage
+	}
 
-		// 获取僵尸玩家的ZR类别
-		ZEPlayer* pZEPlayer = pVictimController->GetZEPlayer();
-		float classknockback = 1.0f;
+	if (g_cvarGroanChance.Get() && pVictimPawn->m_iTeamNum() == CS_TEAM_T && (rand() % g_cvarGroanChance.Get()) == 1)
+		pVictimPawn->EmitSound("zr.amb.zombie_pain");
 
-		// 应用僵尸类别的击退系数
-		if (pZEPlayer && pZEPlayer->GetActiveZRClass())
+	// grenade and molotov knockback
+	if (pAttackerPawn->m_iTeamNum() == CS_TEAM_CT && pVictimPawn->m_iTeamNum() == CS_TEAM_T)
+	{
+		CBaseEntity* pInflictor = pInfo->m_hInflictor.Get();
+		const char* pszInflictorClass = pInflictor ? pInflictor->GetClassname() : "";
+		// inflictor class from grenade damage is actually hegrenade_projectile
+		bool bGrenade = V_strncmp(pszInflictorClass, "hegrenade", 9) == 0;
+		bool bInferno = V_strncmp(pszInflictorClass, "inferno", 7) == 0;
+
+		if (g_cvarNapalmGrenades.Get() && bGrenade)
 		{
-			std::shared_ptr<ZRZombieClass> pZombieClass = std::dynamic_pointer_cast<ZRZombieClass>(pZEPlayer->GetActiveZRClass());
-			if (pZombieClass && pZombieClass->flKnockback != 0.0f)
-				classknockback = pZombieClass->flKnockback;
+			// Scale burn duration by damage, so nades from farther away burn zombies for less time
+			float flDuration = (pInfo->m_flDamage / g_cvarNapalmFullDamage.Get()) * g_cvarNapalmDuration.Get();
+			flDuration = clamp(flDuration, 0.0f, g_cvarNapalmDuration.Get());
+
+			// Can't use the same inflictor here as it'll end up calling this again each burn damage tick
+			// DMG_BURN makes loud noises so use DMG_FALL instead which is completely silent
+			IgnitePawn(pVictimPawn, flDuration, pAttackerPawn, pAttackerPawn, nullptr, DMG_FALL);
 		}
 
-		// 应用武器的击退效果
-		ZR_ApplyKnockback(pAttackerPawn, pVictimPawn, pInfo->m_flDamage, szWeapon, pInfo->m_iHitGroup, classknockback);
-
-		// 获取伤害值(用于音效判断)
-		int iDamage = ceil(pInfo->m_flDamage);
-
-		// 处理僵尸呻吟音效
-		// 根据设置的几率播放僵尸呻吟声
-		if (g_cvarGroanChance.Get() != 0 && (rand() % g_cvarGroanChance.Get() == 0))
-			pVictimPawn->EmitSound("zr.amb.zombie_voice_pain");
-
-		// 阻止实际伤害处理(人类不能杀死僵尸，只能击退)
-		return false;
+		if (bGrenade || bInferno)
+			ZR_ApplyKnockbackExplosion((CBaseEntity*)pInflictor, (CCSPlayerPawn*)pVictimPawn, (int)pInfo->m_flDamage, bInferno);
 	}
-
-	// 默认允许伤害继续处理
-	return true;
+	return false;
 }
 
 // return false to prevent player from picking it up
@@ -1845,8 +1582,16 @@ void ZR_Hook_ClientPutInServer(CPlayerSlot slot, char const* pszName, int type, 
 	CCSPlayerController* pController = CCSPlayerController::FromSlot(slot);
 	if (!pController)
 		return;
+	pController->ChangeTeam(CS_TEAM_CT);
 
-	SpawnPlayer(pController);
+	CHandle<CCSPlayerController> handle = pController->GetHandle();
+	new CTimer(2.0f, false, false, [handle]() {
+		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
+		if (!pController || !g_bRespawnEnabled || pController->m_iTeamNum < CS_TEAM_T)
+			return -1.0f;
+		pController->Respawn();
+		return -1.0f;
+	});
 }
 
 void ZR_Hook_ClientCommand_JoinTeam(CPlayerSlot slot, const CCommand& args)
@@ -1938,13 +1683,7 @@ void ZR_OnRoundTimeWarning(IGameEvent* pEvent)
 	});
 }
 
-/**
- * 检查是否有队伍存活
- * 检查指定队伍是否还有存活玩家
- * 
- * @param iTeamNum 队伍编号(CS_TEAM_CT或CS_TEAM_T)
- * @return 是否有玩家存活
- */
+// check whether players on a team are all dead
 bool ZR_IsTeamAlive(int iTeamNum)
 {
 	CCSPlayerPawn* pPawn = nullptr;
@@ -1959,37 +1698,25 @@ bool ZR_IsTeamAlive(int iTeamNum)
 	return false;
 }
 
-/**
- * 检查队伍胜利条件
- * 如果一方全部死亡，则另一方获胜
- * 
- * @param iTeamNum 检查获胜的队伍编号(CS_TEAM_CT或CS_TEAM_T)
- * @return 是否满足胜利条件
- */
+// check whether a team has won the round, if so, end the round and incre score
 bool ZR_CheckTeamWinConditions(int iTeamNum)
 {
-	// 如果回合已结束、人类复活功能开启、或者指定了无效队伍，不检查胜利条件
 	if (g_ZRRoundState == EZRRoundState::ROUND_END || (iTeamNum == CS_TEAM_CT && g_bRespawnEnabled) || (iTeamNum != CS_TEAM_T && iTeamNum != CS_TEAM_CT))
 		return false;
 
-	// 检查对方队伍是否还有存活玩家
+	// check the opposite team
 	if (ZR_IsTeamAlive(iTeamNum == CS_TEAM_CT ? CS_TEAM_T : CS_TEAM_CT))
 		return false;
 
-	// 满足胜利条件，结束回合并加分
+	// allow the team to win
 	ZR_EndRoundAndAddTeamScore(iTeamNum);
 
 	return true;
 }
 
-/**
- * 结束回合并增加队伍分数
- * CS_TEAM_SPECTATOR: 平局
- * CS_TEAM_T: T队(僵尸)胜，增加T队分数
- * CS_TEAM_CT: CT队(人类)胜，增加CT队分数
- * 
- * @param iTeamNum 获胜队伍编号
- */
+// spectator: draw
+// t: t win, add t score
+// ct: ct win, add ct score
 void ZR_EndRoundAndAddTeamScore(int iTeamNum)
 {
 	bool bServerIdle = true;
@@ -1997,7 +1724,6 @@ void ZR_EndRoundAndAddTeamScore(int iTeamNum)
 	if (!GetGlobals() || !g_pGameRules)
 		return;
 
-	// 检查服务器是否空闲(没有真实玩家)
 	for (int i = 0; i < GetGlobals()->maxClients; i++)
 	{
 		ZEPlayer* pPlayer = g_playerManager->GetPlayer(i);
@@ -2009,11 +1735,10 @@ void ZR_EndRoundAndAddTeamScore(int iTeamNum)
 		break;
 	}
 
-	// 服务器空闲时不结束回合
+	// Don't end rounds while the server is idling
 	if (bServerIdle)
 		return;
 
-	// 根据获胜队伍设置回合结束原因
 	CSRoundEndReason iReason;
 	switch (iTeamNum)
 	{
@@ -2029,48 +1754,34 @@ void ZR_EndRoundAndAddTeamScore(int iTeamNum)
 			break;
 	}
 
-	// 获取回合重启延迟时间
 	static ConVarRefAbstract mp_round_restart_delay("mp_round_restart_delay");
 	float flRestartDelay = mp_round_restart_delay.GetFloat();
 
-	// 结束回合并设置状态
 	g_pGameRules->TerminateRound(flRestartDelay, iReason);
 	g_ZRRoundState = EZRRoundState::ROUND_END;
 	ToggleRespawn(true, false);
 
-	// 处理CT队(人类)胜利
 	if (iTeamNum == CS_TEAM_CT)
 	{
-		// 检查CT队实体是否存在
 		if (!g_hTeamCT.Get())
 		{
 			Panic("Cannot find CTeam for CT!\n");
 			return;
 		}
-		
-		// 增加CT队分数
 		g_hTeamCT->m_iScore = g_hTeamCT->m_iScore() + 1;
-		
-		// 如果设置了人类胜利覆盖粒子效果，则创建特效
 		if (g_cvarHumanWinOverlayParticle.Get().Length() != 0)
 			ZR_CreateOverlay(g_cvarHumanWinOverlayParticle.Get().String(), 1.0f,
 							 g_cvarHumanWinOverlaySize.Get(), flRestartDelay,
 							 Color(255, 255, 255), g_cvarHumanWinOverlayMaterial.Get().String());
 	}
-	// 处理T队(僵尸)胜利
 	else if (iTeamNum == CS_TEAM_T)
 	{
-		// 检查T队实体是否存在
 		if (!g_hTeamT.Get())
 		{
 			Panic("Cannot find CTeam for T!\n");
 			return;
 		}
-		
-		// 增加T队分数
 		g_hTeamT->m_iScore = g_hTeamT->m_iScore() + 1;
-		
-		// 如果设置了僵尸胜利覆盖粒子效果，则创建特效
 		if (g_cvarZombieWinOverlayParticle.Get().Length() != 0)
 			ZR_CreateOverlay(g_cvarZombieWinOverlayParticle.Get().String(), 1.0f,
 							 g_cvarZombieWinOverlaySize.Get(), flRestartDelay,
