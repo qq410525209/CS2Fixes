@@ -1446,14 +1446,14 @@
 			 char classicSpawnMsg[256];
  
 			 if (g_cvarInfectSpawnWarning.Get() && g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::IN_PLACE)
-				 V_snprintf(classicSpawnMsg, sizeof(classicSpawnMsg), "<span color='#940000'>WARNING: </span><span color='#FF3333'>Zombies will spawn between humans!</span><br>\u00A0<br>");
+				 V_snprintf(classicSpawnMsg, sizeof(classicSpawnMsg), "<span color='#940000'>警告: </span><span color='#FF3333'>僵尸不会产生,除非手动触发!</span><br>\u00A0<br>");
 			 else
 				 V_snprintf(classicSpawnMsg, sizeof(classicSpawnMsg), "");
  
-			 SendHudMessageAll(2, EHudPriority::InfectionCountdown, "%sFirst infection in <span color='#00FF00'>%i %s</span>!", classicSpawnMsg, g_iInfectionCountDown, g_iInfectionCountDown == 1 ? "second" : "seconds");
+			 SendHudMessageAll(2, EHudPriority::InfectionCountdown, "%s[已禁用]首次感染 <span color='#00FF00'>%i %s</span>!", classicSpawnMsg, g_iInfectionCountDown, g_iInfectionCountDown == 1 ? "second" : "秒");
  
 			 if (g_iInfectionCountDown % 5 == 0)
-				 ClientPrintAll(HUD_PRINTTALK, "%sFirst infection in \7%i %s\1!", ZR_PREFIX, g_iInfectionCountDown, g_iInfectionCountDown == 1 ? "second" : "seconds");
+				 ClientPrintAll(HUD_PRINTTALK, "%s[已禁用]首次感染 \x08%i %s\1!", ZR_PREFIX, g_iInfectionCountDown, g_iInfectionCountDown == 1 ? "second" : "秒");
 		 }
 		 (*iSecondsElapsed)++;
  
