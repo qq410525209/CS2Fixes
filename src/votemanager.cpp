@@ -193,7 +193,7 @@ CON_COMMAND_CHAT(rtv, "- Vote to end the current map sooner")
 
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "You cannot use this command from the server console.");
+		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "您不能从服务器控制台使用此命令.");
 		return;
 	}
 
@@ -204,29 +204,29 @@ CON_COMMAND_CHAT(rtv, "- Vote to end the current map sooner")
 	// Something has to really go wrong for this to happen
 	if (!pPlayer)
 	{
-		Warning("%s Tried to access a null ZEPlayer!!\n", player->GetPlayerName());
+		Warning("%s 尝试访问空的 ZEPlayer!!\n", player->GetPlayerName());
 		return;
 	}
 
 	switch (g_pVoteManager->GetRTVState())
 	{
 		case ERTVState::MAP_START:
-			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV is not open yet.");
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV 尚未开启");
 			return;
-		case ERTVState::POST_RTV_SUCCESSFULL:
-			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV vote already succeeded.");
+			case ERTVState::POST_RTV_SUCCESSFULL:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV 投票已成功");
 			return;
-		case ERTVState::POST_LAST_ROUND_END:
-			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV is closed during next map selection.");
+			case ERTVState::POST_LAST_ROUND_END:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV 将在下次地图选择时关闭");
 			return;
-		case ERTVState::BLOCKED_BY_ADMIN:
-			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV has been blocked by an Admin.");
+			case ERTVState::BLOCKED_BY_ADMIN:
+			ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "RTV 已被管理员屏蔽");
 			return;
 	}
 
 	if (pPlayer->GetRTVVote())
 	{
-		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "You have already rocked the vote (%i voted, %i needed).", g_pVoteManager->GetCurrentRTVCount(), g_pVoteManager->GetNeededRTVCount());
+		ClientPrint(player, HUD_PRINTTALK, CHAT_PREFIX "你已经投票 (%i voted, %i needed).", g_pVoteManager->GetCurrentRTVCount(), g_pVoteManager->GetNeededRTVCount());
 		return;
 	}
 
@@ -251,7 +251,7 @@ CON_COMMAND_CHAT(unrtv, "- Remove your vote to end the current map sooner")
 
 	if (!player)
 	{
-		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "You cannot use this command from the server console.");
+		ClientPrint(player, HUD_PRINTCONSOLE, CHAT_PREFIX "您不能从服务器控制台使用此命令");
 		return;
 	}
 
@@ -715,7 +715,7 @@ bool CVoteManager::CheckRTVStatus()
 
 		if (g_cvarRTVEndRound.Get())
 		{
-			ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "RTV succeeded! Ending the map now...");
+			ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "RTV 成功! 地图即将结束...");
 
 			new CTimer(3.0f, false, true, []() {
 				g_pGameRules->TerminateRound(5.0f, CSRoundEndReason::Draw);
@@ -725,7 +725,7 @@ bool CVoteManager::CheckRTVStatus()
 		}
 		else
 		{
-			ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "RTV succeeded! This is the last round of the map!");
+			ClientPrintAll(HUD_PRINTTALK, CHAT_PREFIX "RTV成功!这是地图的最后一回合!");
 		}
 
 		for (int i = 0; i < GetGlobals()->maxClients; i++)
