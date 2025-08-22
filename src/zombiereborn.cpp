@@ -1542,9 +1542,9 @@ void ZR_Detour_CEntityIdentity_AcceptInput(CEntityIdentity* pThis, CUtlSymbolLar
 	if (!V_strcasecmp(inputName, "Trigger"))
 		ToggleRespawn();
 	else if (!V_strcasecmp(inputName, "Enable") && !g_bRespawnEnabled)
-		ToggleRespawn(true, true);
+		ToggleRespawn(true， true);
 	else if (!V_strcasecmp(inputName, "Disable") && g_bRespawnEnabled)
-		ToggleRespawn(true, false);
+		ToggleRespawn(true， false);
 	else
 		return;
 
@@ -1553,7 +1553,7 @@ void ZR_Detour_CEntityIdentity_AcceptInput(CEntityIdentity* pThis, CUtlSymbolLar
 
 void SpawnPlayer(CCSPlayerController* pController)
 {
-	pController->ChangeTeam(g_ZRRoundState == EZRRoundState::POST_INFECTION ? CS_TEAM_T : CS_TEAM_CT);
+	pController->ChangeTeam(CS_TEAM_CT);
 
 	// Make sure the round ends if spawning into an empty server
 	if (!ZR_IsTeamAlive(CS_TEAM_CT) && !ZR_IsTeamAlive(CS_TEAM_T) && g_ZRRoundState != EZRRoundState::ROUND_END)
@@ -1567,7 +1567,7 @@ void SpawnPlayer(CCSPlayerController* pController)
 	}
 
 	CHandle<CCSPlayerController> handle = pController->GetHandle();
-	new CTimer(2.0f, false, false, [handle]() {
+	new CTimer(2.0f， false， false, [handle]() {
 		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
 		if (!pController || !g_bRespawnEnabled || pController->m_iTeamNum < CS_TEAM_T)
 			return -1.0f;
@@ -1578,11 +1578,13 @@ void SpawnPlayer(CCSPlayerController* pController)
 
 void ZR_Hook_ClientPutInServer(CPlayerSlot slot, char const* pszName, int type, uint64 xuid)
 {
-	CCSPlayerController* pController = CCSPlayerController::FromSlot(slot);
-	if (!pController)
-		return;
+    CCSPlayerController* pController = CCSPlayerController::FromSlot(slot);
+    if (!pController)
+        return;
 
-	SpawnPlayer(pController);
+    // 加入时强制切为人类
+    pController->SwitchTeam(CS_TEAM_CT);
+    SpawnPlayer(pController);
 }
 
 void ZR_Hook_ClientCommand_JoinTeam(CPlayerSlot slot, const CCommand& args)
