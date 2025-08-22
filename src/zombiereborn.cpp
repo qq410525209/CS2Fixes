@@ -989,9 +989,9 @@
  
  void ZR_OnRoundStart(IGameEvent* pEvent)
  {
-	 ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "The game is \x05Humans vs. Zombies\x01, the goal for zombies is to infect all humans by knifing them.");
+	 ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "\x0B训练模式 \x09启用");
 	 if (g_cvarInfectSpawnWarning.Get() && g_cvarInfectSpawnType.Get() == (int)EZRSpawnType::IN_PLACE)
-		 ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "Classic spawn is enabled! Zombies will be \x07spawning between humans\x01!");
+		 ClientPrintAll(HUD_PRINTTALK, ZR_PREFIX "\x0B训练模式 \x09启用");
 	 SetupRespawnToggler();
 	 CZRRegenTimer::RemoveAllTimers();
  
