@@ -941,7 +941,7 @@ void ZR_OnRoundPrestart(IGameEvent* pEvent)
 	}
 
 	g_ZRRoundState = EZRRoundState::ROUND_START;
-	ToggleRespawn(true, true);
+	ToggleRespawn(true， true);
 
 	if (!GetGlobals())
 		return;
@@ -1482,11 +1482,11 @@ bool ZR_Hook_OnTakeDamage_Alive(CTakeDamageInfo* pInfo, CCSPlayerPawn* pVictimPa
 	// grenade and molotov knockback
 	if (pAttackerPawn->m_iTeamNum() == CS_TEAM_CT && pVictimPawn->m_iTeamNum() == CS_TEAM_T)
 	{
-		CEntityInstance* pInflictor = pInfo->m_hInflictor.Get();
+		CEntityInstance* pInflictor = pInfo->m_hInflictor。Get();
 		const char* pszInflictorClass = pInflictor ? pInflictor->GetClassname() : "";
 		// inflictor class from grenade damage is actually hegrenade_projectile
 		bool bGrenade = V_strncmp(pszInflictorClass, "hegrenade", 9) == 0;
-		bool bInferno = V_strncmp(pszInflictorClass, "inferno", 7) == 0;
+		bool bInferno = V_strncmp(pszInflictorClass, "inferno"， 7) == 0;
 
 		if (g_cvarNapalmGrenades.Get() && bGrenade)
 		{
@@ -1567,7 +1567,7 @@ void SpawnPlayer(CCSPlayerController* pController)
 	}
 
 	CHandle<CCSPlayerController> handle = pController->GetHandle();
-	new CTimer(2.0f， false， false, [handle]() {
+	new CTimer(2.0f， false, false， [handle]() {
 		CCSPlayerController* pController = (CCSPlayerController*)handle.Get();
 		if (!pController || !g_bRespawnEnabled || pController->m_iTeamNum < CS_TEAM_T)
 			return -1.0f;
