@@ -70,6 +70,7 @@ CConVar<int> g_cvarInfectSpawnTimeMin("zr_infect_spawn_time_min", FCVAR_NONE, "M
 CConVar<int> g_cvarInfectSpawnTimeMax("zr_infect_spawn_time_max", FCVAR_NONE, "Maximum time in which Mother Zombies should be picked, after round start", 15, true, 1, false, 0);
 CConVar<int> g_cvarInfectSpawnMZRatio("zr_infect_spawn_mz_ratio", FCVAR_NONE, "Ratio of all Players to Mother Zombies to be spawned at round start", 7, true, 1, true, 64);
 CConVar<int> g_cvarInfectSpawnMinCount("zr_infect_spawn_mz_min_count", FCVAR_NONE, "Minimum amount of Mother Zombies to be spawned at round start", 1, true, 0, false, 0);
+CConVar<bool> g_cvarIgnoreImmunity("zr_ignore_immunity", FCVAR_NONE, "Whether to ignore immunity when selecting Mother Zombies (allow any player to be picked as MZ)", false);
 CConVar<float> g_cvarRespawnDelay("zr_respawn_delay", FCVAR_NONE, "Time before a zombie is automatically respawned, -1 disables this. Note that maps can still manually respawn at any time", 5.0f, true, -1.0f, false, 0.0f);
 CConVar<int> g_cvarDefaultWinnerTeam("zr_default_winner_team", FCVAR_NONE, "Which team wins when time ran out [1 = Draw, 2 = Zombies, 3 = Humans]", CS_TEAM_SPECTATOR, true, 1, true, 3);
 CConVar<int> g_cvarMZImmunityReduction("zr_mz_immunity_reduction", FCVAR_NONE, "How much mz immunity to reduce for each player per round (0-100)", 20, true, 0, true, 100);
@@ -959,20 +960,10 @@ void ZR_OnRoundStart(IGameEvent* pEvent)
 
 void ZR_OnPlayerSpawn(CCSPlayerController* pController)
 {
-	// delay infection a bit
-	bool bInfect = g_ZRRoundState == EZRRoundState::POST_INFECTION;
-
-	// We're infecting this guy with a delay, disable all damage as they have 100 hp until then
-	// also set team immediately in case the spawn teleport is team filtered
-	if (bInfect)
-	{
-		pController->GetPawn()->m_bTakesDamage(false);
-		pController->SwitchTeam(CS_TEAM_T);
-	}
-	else
-	{
-		pController->SwitchTeam(CS_TEAM_CT);
-	}
+	// Always set new joining players to CT (Humans) instead of auto-infecting them
+	// Set team immediately in case the spawn teleport is team filtered
+	pController->SwitchTeam(CS_TEAM_CT);
+	bool bInfect = false;  // Always spawn as human
 
 	CHandle<CCSPlayerController> handle = pController->GetHandle();
 	CTimer::Create(0.05f, TIMERFLAG_MAP | TIMERFLAG_ROUND, [handle, bInfect]() {
@@ -1340,8 +1331,9 @@ void ZR_InitialInfection()
 			CCSPlayerController* pController = (CCSPlayerController*)pSurvivorControllers[randomindex];
 			CCSPlayerPawn* pPawn = (CCSPlayerPawn*)pController->GetPawn();
 			ZEPlayer* pPlayer = pSurvivorControllers[randomindex]->GetZEPlayer();
-			// roll for immunity
-			if (rand() % 100 < pPlayer->GetImmunity())
+			
+			// roll for immunity (unless immunity is ignored)
+			if (!g_cvarIgnoreImmunity.Get() && rand() % 100 < pPlayer->GetImmunity())
 			{
 				pSurvivorControllers.FastRemove(randomindex);
 				continue;
