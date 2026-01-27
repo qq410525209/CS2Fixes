@@ -1154,14 +1154,24 @@ std::vector<SpawnPoint*> ZR_GetSpawns()
 	if (!g_pGameRules)
 		return spawns;
 
-	CUtlVector<SpawnPoint*>* ctSpawns = g_pGameRules->m_CTSpawnPoints();
-	CUtlVector<SpawnPoint*>* tSpawns = g_pGameRules->m_TerroristSpawnPoints();
+	auto ctSpawns = g_pGameRules->m_CTSpawnPoints();
+	auto tSpawns = g_pGameRules->m_TerroristSpawnPoints();
 
 	FOR_EACH_VEC(*ctSpawns, i)
-	spawns.push_back((*ctSpawns)[i]);
+	{
+		SpawnPoint* pSpawn = (*ctSpawns)[i].Get();
+
+		if (pSpawn)
+			spawns.push_back(pSpawn);
+	}
 
 	FOR_EACH_VEC(*tSpawns, i)
-	spawns.push_back((*tSpawns)[i]);
+	{
+		SpawnPoint* pSpawn = (*tSpawns)[i].Get();
+
+		if (pSpawn)
+			spawns.push_back(pSpawn);
+	}
 
 	if (!spawns.size())
 		Panic("There are no spawns!\n");
@@ -1497,8 +1507,7 @@ void ZR_Detour_CEntityIdentity_AcceptInput(CEntityIdentity* pThis, CUtlSymbolLar
 
 void SpawnPlayer(CCSPlayerController* pController)
 {
-	// 改为始终加入CT队（人类）
-    pController->ChangeTeam(CS_TEAM_CT);
+	pController->ChangeTeam(CS_TEAM_CT);
 
 	// Make sure the round ends if spawning into an empty server
 	if (!ZR_IsTeamAlive(CS_TEAM_CT) && !ZR_IsTeamAlive(CS_TEAM_T) && g_ZRRoundState != EZRRoundState::ROUND_END)
